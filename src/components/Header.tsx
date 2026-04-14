@@ -45,7 +45,7 @@ export function Header({ onCartPress, cartCount = 0 }: HeaderProps) {
       <StatusBar barStyle="light-content" backgroundColor={Colors.bgCard} />
 
       {/* Main row */}
-      <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingTop: 48, paddingBottom: 12, gap: 10 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, gap: 10 }}>
         {/* Logo */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1 }}>
           <View style={{ backgroundColor: Colors.cyan, borderRadius: 6, width: 28, height: 28, alignItems: "center", justifyContent: "center" }}>

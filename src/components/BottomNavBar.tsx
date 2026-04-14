@@ -36,7 +36,7 @@ export function BottomNavBar({ activeTab, onTabPress, isDigital }: BottomNavBarP
         key={tab.name}
         onPress={() => onTabPress(tab.name)}
         activeOpacity={0.7}
-        style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 8, gap: 3 }}
+        style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 5, gap: 2 }}
       >
         <Ionicons
           name={active ? tab.iconActive : tab.icon}
@@ -51,57 +51,56 @@ export function BottomNavBar({ activeTab, onTabPress, isDigital }: BottomNavBarP
   };
 
   return (
-    <View style={{
-      position: "absolute",
-      bottom: 0,
-      left: 0,
-      right: 0,
-      backgroundColor: Colors.bgCard,
-      borderTopWidth: 1,
-      borderTopColor: Colors.bgBorder,
-      flexDirection: "row",
-      alignItems: "flex-end",
-      paddingBottom: Platform.OS === "ios" ? 24 : 8,
-    }}>
-      {/* Left tabs */}
-      {LEFT_TABS.map(renderTab)}
+    <View style={{ position: "absolute", bottom: 0, left: 0, right: 0 }}>
+      {/* Bar — renderizada primeiro (abaixo na pilha) */}
+      <View style={{
+        backgroundColor: Colors.bgCard,
+        borderTopWidth: 1,
+        borderTopColor: Colors.bgBorder,
+        flexDirection: "row",
+        alignItems: "center",
+        paddingTop: 8,
+        paddingBottom: Platform.OS === "ios" ? 28 : 14,
+      }}>
+        {LEFT_TABS.map(renderTab)}
 
-      {/* Center button — toggle físico / digital */}
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "flex-end", paddingBottom: 6 }}>
+        {/* Espaço central — label abaixo do botão flutuante */}
+        <View style={{ flex: 1, alignItems: "center", paddingTop: 26 }}>
+          <Text style={{ color: isDigital ? Colors.cyan : Colors.textMuted, fontSize: 9, fontWeight: "700" }}>
+            Digital
+          </Text>
+        </View>
+
+        {RIGHT_TABS.map(renderTab)}
+      </View>
+
+      {/* Botão flutuante — renderizado depois, fica por cima da barra */}
+      <View
+        pointerEvents="box-none"
+        style={{ position: "absolute", top: -18, left: 0, right: 0, alignItems: "center" }}
+      >
         <TouchableOpacity
           onPress={() => onTabPress("stl")}
           activeOpacity={0.85}
           style={{
-            width: 58,
-            height: 58,
-            borderRadius: 29,
+            width: 52,
+            height: 52,
+            borderRadius: 26,
             backgroundColor: isDigital ? Colors.cyan : Colors.bgCardAlt,
             borderWidth: 2,
             borderColor: Colors.cyan,
             alignItems: "center",
             justifyContent: "center",
-            marginBottom: 2,
-            // Elevação visual
             shadowColor: Colors.cyan,
-            shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: isDigital ? 0.5 : 0.2,
-            shadowRadius: 10,
-            elevation: 8,
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: isDigital ? 0.6 : 0.25,
+            shadowRadius: 12,
+            elevation: 12,
           }}
         >
-          <Ionicons
-            name="cube"
-            size={26}
-            color={isDigital ? Colors.bg : Colors.cyan}
-          />
+          <Ionicons name="cube" size={24} color={isDigital ? Colors.bg : Colors.cyan} />
         </TouchableOpacity>
-        <Text style={{ color: isDigital ? Colors.cyan : Colors.textMuted, fontSize: 10, fontWeight: "700" }}>
-          {isDigital ? "Digital" : "Físico"}
-        </Text>
       </View>
-
-      {/* Right tabs */}
-      {RIGHT_TABS.map(renderTab)}
     </View>
   );
 }
