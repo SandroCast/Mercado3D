@@ -9,7 +9,7 @@ import { ProductCard } from "../components/ProductCard";
 import { SectionHeader } from "../components/SectionHeader";
 
 import { mockProducts } from "../constants/mockData";
-import { Colors } from "../constants/colors";
+import { useColors } from "../contexts/ThemeContext";
 import { Product } from "../types";
 
 const { width } = Dimensions.get("window");
@@ -20,6 +20,7 @@ interface HomeScreenProps {
 }
 
 export function HomeScreen({ onNavigateToDigital }: HomeScreenProps) {
+  const Colors = useColors();
   const [refreshing, setRefreshing] = useState(false);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 

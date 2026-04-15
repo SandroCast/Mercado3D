@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Colors } from "../constants/colors";
+import { useColors } from "../contexts/ThemeContext";
 
 export type TabName = "home" | "search" | "stl" | "favorites" | "profile";
 
@@ -19,7 +19,7 @@ const LEFT_TABS: Tab[] = [
 
 const RIGHT_TABS: Tab[] = [
   { name: "favorites", label: "Favoritos",  icon: "heart-outline",      iconActive: "heart" },
-  { name: "profile",   label: "Perfil",     icon: "person-outline",     iconActive: "person" },
+  { name: "profile",   label: "Mais",       icon: "grid-outline",       iconActive: "grid" },
 ];
 
 interface BottomNavBarProps {
@@ -29,6 +29,7 @@ interface BottomNavBarProps {
 }
 
 export function BottomNavBar({ activeTab, onTabPress, isDigital }: BottomNavBarProps) {
+  const Colors = useColors();
   const renderTab = (tab: Tab) => {
     const active = activeTab === tab.name;
     return (

@@ -9,7 +9,7 @@ import {
   Keyboard,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Colors } from "../constants/colors";
+import { useColors } from "../contexts/ThemeContext";
 
 interface HeaderProps {
   onCartPress?: () => void;
@@ -17,6 +17,7 @@ interface HeaderProps {
 }
 
 export function Header({ onCartPress, cartCount = 0 }: HeaderProps) {
+  const Colors = useColors();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchText, setSearchText] = useState("");
   const inputRef = useRef<TextInput>(null);
@@ -59,11 +60,6 @@ export function Header({ onCartPress, cartCount = 0 }: HeaderProps) {
         {/* Search icon */}
         <TouchableOpacity onPress={openSearch} activeOpacity={0.7} style={{ padding: 6 }}>
           <Ionicons name="search-outline" size={22} color={Colors.textGray} />
-        </TouchableOpacity>
-
-        {/* Favorite */}
-        <TouchableOpacity activeOpacity={0.7} style={{ padding: 6 }}>
-          <Ionicons name="heart-outline" size={22} color={Colors.textGray} />
         </TouchableOpacity>
 
         {/* Cart */}

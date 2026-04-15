@@ -14,7 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { SectionHeader } from "../components/SectionHeader";
 import { mockDigitalProducts } from "../constants/mockData";
-import { Colors } from "../constants/colors";
+import { useColors } from "../contexts/ThemeContext";
 import { DigitalProduct } from "../types";
 
 const { width } = Dimensions.get("window");
@@ -30,6 +30,7 @@ const digitalCategories = [
 ];
 
 function DigitalCard({ product, cardWidth }: { product: DigitalProduct; cardWidth: number }) {
+  const Colors = useColors();
   const price = product.price === 0
     ? "FREE"
     : product.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -97,6 +98,7 @@ interface DigitalScreenProps {
 }
 
 export function DigitalScreen({ onBack }: DigitalScreenProps) {
+  const Colors = useColors();
   const [selectedCat, setSelectedCat] = useState("all");
 
   const filtered = selectedCat === "all"

@@ -21,10 +21,22 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.sandrocastro.Mercado3D"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "scheme": "mercado3d",
+    "plugins": [
+      "expo-web-browser",
+      "@react-native-google-signin/google-signin",
+      "expo-dev-client"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "3bb7554d-efa5-4ace-8a10-ac5026607923"
+      }
     }
   }
 }

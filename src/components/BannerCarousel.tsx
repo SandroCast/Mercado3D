@@ -10,7 +10,7 @@ import {
   NativeSyntheticEvent,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Colors } from "../constants/colors";
+import { useColors } from "../contexts/ThemeContext";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 
@@ -35,7 +35,7 @@ const banners: BannerItem[] = [
     subtitle: "As melhores impressoras e suprimentos premium para transformar suas ideias em realidade.",
     cta: "Ver Impressoras",
     gradient: ["#0d1117", "#111827"],
-    accentColor: Colors.cyan,
+    accentColor: "#22d3ee",
     imageUri: "https://placehold.co/400x220/0d1117/22d3ee?text=Impressoras+3D",
   },
   {
@@ -57,7 +57,7 @@ const banners: BannerItem[] = [
     subtitle: "Miniaturas, peças técnicas e modelos decorativos prontos para imprimir.",
     cta: "Explorar STL",
     gradient: ["#1e1b4b", "#312e81"],
-    accentColor: Colors.cyan,
+    accentColor: "#22d3ee",
     imageUri: "https://placehold.co/400x220/1e1b4b/22d3ee?text=STL+Universe",
   },
   {
@@ -68,12 +68,13 @@ const banners: BannerItem[] = [
     subtitle: "Bicos, extrusoras, camas aquecidas e tudo que sua impressora precisa.",
     cta: "Ver Peças",
     gradient: ["#0d1117", "#0c1a2e"],
-    accentColor: Colors.orange,
+    accentColor: "#f97316",
     imageUri: "https://placehold.co/400x220/0d1117/f97316?text=Peças",
   },
 ];
 
 export function BannerCarousel() {
+  const Colors = useColors();
   const flatListRef = useRef<FlatList>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -110,6 +111,10 @@ export function BannerCarousel() {
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={onScroll}
+        getItemLayout={(_, index) => ({ length: SCREEN_W, offset: SCREEN_W * index, index })}
+        onScrollToIndexFailed={(info) => {
+          flatListRef.current?.scrollToOffset({ offset: info.index * SCREEN_W, animated: true });
+        }}
         renderItem={({ item }) => (
           <LinearGradient
             colors={item.gradient}
@@ -128,7 +133,7 @@ export function BannerCarousel() {
             )}
 
             {/* Title */}
-            <Text style={{ color: Colors.white, fontSize: 30, fontWeight: "800", lineHeight: 36 }}>
+            <Text style={{ color: "#ffffff", fontSize: 30, fontWeight: "800", lineHeight: 36 }}>
               {item.title}
             </Text>
             <Text style={{ color: item.accentColor, fontSize: 30, fontWeight: "800", lineHeight: 36, marginBottom: 12 }}>
@@ -136,7 +141,7 @@ export function BannerCarousel() {
             </Text>
 
             {/* Subtitle */}
-            <Text style={{ color: Colors.textGray, fontSize: 13, lineHeight: 20, maxWidth: SCREEN_W * 0.75 }}>
+            <Text style={{ color: "#94a3b8", fontSize: 13, lineHeight: 20, maxWidth: SCREEN_W * 0.75 }}>
               {item.subtitle}
             </Text>
           </LinearGradient>

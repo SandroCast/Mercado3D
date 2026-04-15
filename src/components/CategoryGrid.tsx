@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Colors } from "../constants/colors";
+import { useColors } from "../contexts/ThemeContext";
 
 const categories = [
-  { id: "all",        label: "Todos",        icon: "grid-outline" as const,             color: Colors.cyan },
+  { id: "all",        label: "Todos",        icon: "grid-outline" as const,             color: "#22d3ee" },
   { id: "impressoras",label: "Impressoras",  icon: "print-outline" as const,            color: "#38bdf8" },
   { id: "filamentos", label: "Filamentos",   icon: "layers-outline" as const,           color: "#a78bfa" },
   { id: "pecas",      label: "Peças",        icon: "construct-outline" as const,        color: "#34d399" },
@@ -18,6 +18,7 @@ interface CategoryGridProps {
 }
 
 export function CategoryGrid({ onCategoryPress }: CategoryGridProps) {
+  const Colors = useColors();
   const [selected, setSelected] = useState("all");
 
   const handlePress = (id: string) => {

@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Colors } from "../constants/colors";
+import { useColors } from "../contexts/ThemeContext";
 
 interface SectionHeaderProps {
   title: string;
@@ -10,6 +10,7 @@ interface SectionHeaderProps {
 }
 
 export function SectionHeader({ title, subtitle, onSeeAll }: SectionHeaderProps) {
+  const Colors = useColors();
   return (
     <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, marginBottom: 14 }}>
       <View>

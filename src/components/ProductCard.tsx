@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, Image, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Product } from "../types";
-import { Colors } from "../constants/colors";
+import { useColors } from "../contexts/ThemeContext";
 
 interface ProductCardProps {
   product: Product;
@@ -13,6 +13,7 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, onPress, onFavorite, isFavorited = false, width }: ProductCardProps) {
+  const Colors = useColors();
   const discount = product.originalPrice
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : null;
