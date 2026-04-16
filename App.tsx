@@ -32,7 +32,7 @@ function AppContent() {
   return (
     <View style={{ flex: 1, backgroundColor: Colors.bg }}>
       <View style={{ flex: 1, display: activeTab === "home" ? "flex" : "none" }}>
-        <HomeScreen />
+        <HomeScreen onProfilePress={() => setActiveTab("profile")} />
       </View>
       <View style={{ flex: 1, display: activeTab === "stl" ? "flex" : "none" }}>
         <DigitalScreen />

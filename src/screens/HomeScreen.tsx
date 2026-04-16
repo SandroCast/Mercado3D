@@ -17,9 +17,10 @@ const CARD_W = (width - 16 * 2 - 12) / 2;
 
 interface HomeScreenProps {
   onNavigateToDigital?: () => void;
+  onProfilePress?: () => void;
 }
 
-export function HomeScreen({ onNavigateToDigital }: HomeScreenProps) {
+export function HomeScreen({ onNavigateToDigital, onProfilePress }: HomeScreenProps) {
   const Colors = useColors();
   const [refreshing, setRefreshing] = useState(false);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
@@ -49,7 +50,7 @@ export function HomeScreen({ onNavigateToDigital }: HomeScreenProps) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }} edges={["top"]}>
-      <Header cartCount={2} />
+      <Header cartCount={2} onProfilePress={onProfilePress} />
 
       <FlatList
         data={mockProducts}

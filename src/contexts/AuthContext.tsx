@@ -6,14 +6,18 @@ interface AuthContextValue {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  emailConfirmed: boolean;
   signOut: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue>({
   session: null,
   user: null,
   loading: true,
+  emailConfirmed: false,
   signOut: async () => {},
+  refreshUser: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -37,8 +41,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
   };
 
+  const refreshUser = async () => {
+    const { data } = await supabase.auth.getUser();
+    if (data.user) {
+      setSession((prev) => prev ? { ...prev, user: data.user } : prev);
+    }
+  };
+
+  // Considera verificado se: for conta Google/social OU se o campo próprio app_email_confirmed for true
+  // (não usamos email_verified pois o Supabase sobrescreve esse campo automaticamente)
+  const emailConfirmed =
+    session?.user?.app_metadata?.provider !== "email" ||
+    session?.user?.user_metadata?.app_email_confirmed === true;
+
   return (
-    <AuthContext.Provider value={{ session, user: session?.user ?? null, loading, signOut }}>
+    <AuthContext.Provider value={{ session, user: session?.user ?? null, loading, emailConfirmed, signOut, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

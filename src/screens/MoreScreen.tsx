@@ -5,12 +5,15 @@ import {
   ScrollView,
   TouchableOpacity,
   Switch,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors, useTheme } from "../contexts/ThemeContext";
 import { useAuth } from "../contexts/AuthContext";
 import { ConfirmModal } from "../components/ConfirmModal";
+import { VerifyEmailModal } from "../components/VerifyEmailModal";
+import { EditProfileScreen } from "./EditProfileScreen";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -164,8 +167,14 @@ function SectionBlock({ section }: { section: Section }) {
 export function MoreScreen() {
   const Colors = useColors();
   const { isDark, toggleTheme } = useTheme();
-  const { user, signOut } = useAuth();
+  const { user, signOut, emailConfirmed } = useAuth();
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
+  const [verifyModalVisible, setVerifyModalVisible] = useState(false);
+  const [editProfileVisible, setEditProfileVisible] = useState(false);
+
+  const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
+  const displayName: string = user?.user_metadata?.full_name ?? user?.email ?? "";
+  const initial = displayName.charAt(0).toUpperCase();
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }} edges={["top"]}>
@@ -181,28 +190,41 @@ export function MoreScreen() {
           paddingBottom: 24,
         }}>
           {/* Avatar */}
-          <View style={{
-            width: 60,
-            height: 60,
-            borderRadius: 30,
-            backgroundColor: Colors.purple,
-            alignItems: "center",
-            justifyContent: "center",
-            borderWidth: 2,
-            borderColor: Colors.cyan,
-          }}>
-            <Text style={{ color: "#fff", fontSize: 22, fontWeight: "800" }}>S</Text>
-          </View>
+          {avatarUrl ? (
+            <Image
+              source={{ uri: avatarUrl }}
+              style={{
+                width: 60,
+                height: 60,
+                borderRadius: 30,
+                borderWidth: 2,
+                borderColor: Colors.cyan,
+              }}
+            />
+          ) : (
+            <View style={{
+              width: 60,
+              height: 60,
+              borderRadius: 30,
+              backgroundColor: Colors.cyan,
+              alignItems: "center",
+              justifyContent: "center",
+              borderWidth: 2,
+              borderColor: Colors.cyan,
+            }}>
+              <Text style={{ color: Colors.bg, fontSize: 22, fontWeight: "800" }}>{initial}</Text>
+            </View>
+          )}
 
           {/* Infos */}
           <View style={{ flex: 1 }}>
-            <Text style={{ color: Colors.white, fontSize: 17, fontWeight: "800" }}>
-              Sandro Castro
+            <Text style={{ color: Colors.white, fontSize: 17, fontWeight: "800" }} numberOfLines={1}>
+              {displayName || "Usuário"}
             </Text>
-            <Text style={{ color: Colors.textMuted, fontSize: 12, marginTop: 2 }}>
-              sandro@mercado3d.com.br
+            <Text style={{ color: Colors.textMuted, fontSize: 12, marginTop: 2 }} numberOfLines={1}>
+              {user?.email ?? ""}
             </Text>
-            <TouchableOpacity activeOpacity={0.7} style={{ marginTop: 6 }}>
+            <TouchableOpacity activeOpacity={0.7} style={{ marginTop: 6 }} onPress={() => setEditProfileVisible(true)}>
               <Text style={{ color: Colors.cyan, fontSize: 12, fontWeight: "700" }}>
                 Editar perfil
               </Text>
@@ -210,6 +232,59 @@ export function MoreScreen() {
           </View>
 
         </View>
+
+        {/* Card de verificação de e-mail */}
+        {!emailConfirmed && (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => setVerifyModalVisible(true)}
+            style={{
+              marginHorizontal: 16,
+              marginBottom: 16,
+              borderRadius: 14,
+              overflow: "hidden",
+              borderWidth: 1,
+              borderColor: "#92400e",
+            }}
+          >
+            <View style={{
+              backgroundColor: "#78350f",
+              flexDirection: "row",
+              alignItems: "center",
+              padding: 14,
+              gap: 12,
+            }}>
+              {/* Ícone */}
+              <View style={{
+                width: 40, height: 40, borderRadius: 20,
+                backgroundColor: "#92400e",
+                alignItems: "center", justifyContent: "center",
+              }}>
+                <Ionicons name="mail-unread-outline" size={20} color="#fbbf24" />
+              </View>
+
+              {/* Texto */}
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: "#fde68a", fontSize: 13, fontWeight: "700", marginBottom: 2 }}>
+                  E-mail não verificado
+                </Text>
+                <Text style={{ color: "#fcd34d", fontSize: 12, opacity: 0.8 }}>
+                  Confirme seu e-mail para proteger sua conta
+                </Text>
+              </View>
+
+              {/* Botão */}
+              <View style={{
+                backgroundColor: "#f59e0b",
+                borderRadius: 10,
+                paddingHorizontal: 12,
+                paddingVertical: 7,
+              }}>
+                <Text style={{ color: "#1c1917", fontSize: 12, fontWeight: "800" }}>Verificar</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        )}
 
         {/* Toggle tema */}
         <View style={{
@@ -289,6 +364,16 @@ export function MoreScreen() {
           signOut();
         }}
         onCancel={() => setLogoutModalVisible(false)}
+      />
+
+      <VerifyEmailModal
+        visible={verifyModalVisible}
+        onClose={() => setVerifyModalVisible(false)}
+      />
+
+      <EditProfileScreen
+        visible={editProfileVisible}
+        onClose={() => setEditProfileVisible(false)}
       />
     </SafeAreaView>
   );

@@ -7,17 +7,25 @@ import {
   StatusBar,
   Animated,
   Keyboard,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "../contexts/ThemeContext";
+import { useAuth } from "../contexts/AuthContext";
 
 interface HeaderProps {
   onCartPress?: () => void;
+  onProfilePress?: () => void;
   cartCount?: number;
 }
 
-export function Header({ onCartPress, cartCount = 0 }: HeaderProps) {
+export function Header({ onCartPress, onProfilePress, cartCount = 0 }: HeaderProps) {
   const Colors = useColors();
+  const { user } = useAuth();
+
+  const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
+  const displayName: string = user?.user_metadata?.full_name ?? user?.email ?? "";
+  const initial = displayName.charAt(0).toUpperCase();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchText, setSearchText] = useState("");
   const inputRef = useRef<TextInput>(null);
@@ -73,8 +81,26 @@ export function Header({ onCartPress, cartCount = 0 }: HeaderProps) {
         </TouchableOpacity>
 
         {/* Perfil */}
-        <TouchableOpacity activeOpacity={0.7} style={{ padding: 6 }}>
-          <Ionicons name="person-circle-outline" size={26} color={Colors.textGray} />
+        <TouchableOpacity onPress={onProfilePress} activeOpacity={0.7} style={{ padding: 4 }}>
+          {!user ? (
+            /* Não logado — ícone de entrar, sem borda */
+            <Ionicons name="log-in-outline" size={26} color={Colors.textGray} />
+          ) : avatarUrl ? (
+            /* Logado com foto (Google) */
+            <Image
+              source={{ uri: avatarUrl }}
+              style={{ width: 30, height: 30, borderRadius: 15, borderWidth: 1.5, borderColor: Colors.cyan }}
+            />
+          ) : (
+            /* Logado sem foto — inicial do nome */
+            <View style={{
+              width: 30, height: 30, borderRadius: 15,
+              backgroundColor: Colors.cyan,
+              alignItems: "center", justifyContent: "center",
+            }}>
+              <Text style={{ color: Colors.bg, fontSize: 13, fontWeight: "800" }}>{initial}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
