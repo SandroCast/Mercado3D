@@ -25,7 +25,15 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Fetch all tokens for this user
+    // Persist notification so the user can see it in the app
+    await supabase.from("notifications").insert({
+      user_id: toUserId,
+      title,
+      body,
+      data: data ?? {},
+    });
+
+    // Fetch all push tokens for this user
     const { data: rows, error } = await supabase
       .from("push_tokens")
       .select("token")

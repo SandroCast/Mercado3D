@@ -19,6 +19,8 @@ import { OrdersScreen } from "./OrdersScreen";
 import { MyListingsScreen } from "./MyListingsScreen";
 import { MyDigitalFilesScreen } from "./MyDigitalFilesScreen";
 import { MySalesScreen } from "./MySalesScreen";
+import { NotificationsScreen } from "./NotificationsScreen";
+import { useNotifications } from "../contexts/NotificationsContext";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -173,6 +175,7 @@ export function MoreScreen() {
   const Colors = useColors();
   const { isDark, toggleTheme } = useTheme();
   const { user, signOut, emailConfirmed } = useAuth();
+  const { unreadCount } = useNotifications();
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const [verifyModalVisible, setVerifyModalVisible] = useState(false);
   const [editProfileVisible, setEditProfileVisible] = useState(false);
@@ -180,7 +183,8 @@ export function MoreScreen() {
   const [ordersVisible,      setOrdersVisible]      = useState(false);
   const [listingsVisible,    setListingsVisible]    = useState(false);
   const [digitalFilesVisible, setDigitalFilesVisible] = useState(false);
-  const [salesVisible, setSalesVisible] = useState(false);
+  const [salesVisible,       setSalesVisible]       = useState(false);
+  const [notificationsVisible, setNotificationsVisible] = useState(false);
 
   const sections = SECTIONS.map((section) => ({
     ...section,
@@ -190,6 +194,7 @@ export function MoreScreen() {
       if (item.label === "Meus Arquivos STL") return { ...item, onPress: () => setDigitalFilesVisible(true) };
       if (item.label === "Minhas Vendas")    return { ...item, onPress: () => setSalesVisible(true) };
       if (item.label === "Meus Anúncios")    return { ...item, onPress: () => setListingsVisible(true) };
+      if (item.label === "Notificações")     return { ...item, onPress: () => setNotificationsVisible(true), badge: unreadCount > 0 ? String(unreadCount) : undefined };
       return item;
     }),
   }));
@@ -421,6 +426,11 @@ export function MoreScreen() {
       <MySalesScreen
         visible={salesVisible}
         onClose={() => setSalesVisible(false)}
+      />
+
+      <NotificationsScreen
+        visible={notificationsVisible}
+        onClose={() => setNotificationsVisible(false)}
       />
     </SafeAreaView>
   );
