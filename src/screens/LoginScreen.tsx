@@ -4,10 +4,10 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  ActivityIndicator,
+  ScrollView,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
-  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -67,6 +67,10 @@ export function LoginScreen({ onClose }: LoginScreenProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string }>({});
+
+  const clearError = (field: "name" | "email" | "password") =>
+    setErrors((prev) => ({ ...prev, [field]: undefined }));
 
   // Modal de alertas customizado (substitui Alert.alert nativo)
   const [alertModal, setAlertModal] = useState<{
@@ -129,44 +133,33 @@ export function LoginScreen({ onClose }: LoginScreenProps) {
 
   const handleEmailAuth = async () => {
     const trimmedEmail = email.trim().toLowerCase();
+    const newErrors: typeof errors = {};
 
-    if (!trimmedEmail) {
-      showAlert("warning", "Atenção", "Informe seu e-mail.");
-      return;
+    if (!trimmedEmail) newErrors.email = "E-mail obrigatório";
+    else if (!isValidEmail(trimmedEmail)) newErrors.email = "E-mail inválido";
+
+    if (mode === "register") {
+      if (!name.trim()) newErrors.name = "Nome obrigatório";
+      if (!isValidPassword(password)) newErrors.password = "Mínimo 8 caracteres";
     }
-    if (!isValidEmail(trimmedEmail)) {
-      showAlert("warning", "E-mail inválido", "Informe um endereço de e-mail válido.");
+
+    if (mode === "login" && !password) newErrors.password = "Senha obrigatória";
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
     if (mode === "login") {
-      if (!password) {
-        showAlert("warning", "Atenção", "Informe sua senha.");
-        return;
-      }
-
       setLoading(true);
       try {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: trimmedEmail,
-          password,
-        });
-        // Mensagem genérica para não revelar se o e-mail existe ou não
+        const { error } = await supabase.auth.signInWithPassword({ email: trimmedEmail, password });
         if (error) showAlert("error", "Erro ao entrar", "E-mail ou senha incorretos. Verifique seus dados e tente novamente.");
       } finally {
         setLoading(false);
       }
 
     } else if (mode === "register") {
-      if (!name.trim()) {
-        showAlert("warning", "Atenção", "Informe seu nome completo.");
-        return;
-      }
-      if (!isValidPassword(password)) {
-        showAlert("warning", "Senha fraca", "A senha deve ter pelo menos 8 caracteres.");
-        return;
-      }
-
       setLoading(true);
       try {
         const { error } = await supabase.auth.signUp({
@@ -174,9 +167,7 @@ export function LoginScreen({ onClose }: LoginScreenProps) {
           password,
           options: { data: { full_name: name.trim(), app_email_confirmed: false } },
         });
-        if (error) {
-          showAlert("error", "Erro ao cadastrar", translateSupabaseError(error.message));
-        }
+        if (error) showAlert("error", "Erro ao cadastrar", translateSupabaseError(error.message));
         // Se não há erro e data.session existe (Confirm email OFF),
         // o AuthContext detecta a sessão e navega automaticamente.
       } finally {
@@ -191,13 +182,7 @@ export function LoginScreen({ onClose }: LoginScreenProps) {
         if (error) {
           showAlert("error", "Erro", translateSupabaseError(error.message));
         } else {
-          showAlert(
-            "success",
-            "E-mail enviado!",
-            "Verifique sua caixa de entrada para redefinir sua senha.",
-            () => setMode("login"),
-            "Entendido",
-          );
+          showAlert("success", "E-mail enviado!", "Verifique sua caixa de entrada para redefinir sua senha.", () => setMode("login"), "Entendido");
         }
       } finally {
         setLoading(false);
@@ -281,16 +266,13 @@ export function LoginScreen({ onClose }: LoginScreenProps) {
   // ─── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }} edges={["top", "bottom"]}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }} edges={["top"]}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 32 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
           {/* Hero topo */}
           <LinearGradient
             colors={["#0d1117", "#0c1a2e"]}
@@ -489,7 +471,8 @@ export function LoginScreen({ onClose }: LoginScreenProps) {
                     <View style={{
                       flexDirection: "row", alignItems: "center",
                       backgroundColor: Colors.bgCardAlt, borderRadius: 12,
-                      borderWidth: 1, borderColor: Colors.bgBorder, paddingHorizontal: 14, gap: 10,
+                      borderWidth: 1, borderColor: errors.name ? Colors.error : Colors.bgBorder,
+                      paddingHorizontal: 14, gap: 10,
                     }}>
                       <Ionicons name="person-outline" size={18} color={Colors.textMuted} />
                       <TextInput
@@ -497,12 +480,15 @@ export function LoginScreen({ onClose }: LoginScreenProps) {
                         placeholder="Seu nome"
                         placeholderTextColor={Colors.textMuted}
                         value={name}
-                        onChangeText={setName}
+                        onChangeText={(t) => { setName(t); clearError("name"); }}
                         autoCapitalize="words"
                         autoCorrect={false}
                         maxLength={100}
                       />
                     </View>
+                    {!!errors.name && (
+                      <Text style={{ color: Colors.error, fontSize: 11, marginTop: 4 }}>{errors.name}</Text>
+                    )}
                   </View>
                 )}
 
@@ -514,7 +500,8 @@ export function LoginScreen({ onClose }: LoginScreenProps) {
                   <View style={{
                     flexDirection: "row", alignItems: "center",
                     backgroundColor: Colors.bgCardAlt, borderRadius: 12,
-                    borderWidth: 1, borderColor: Colors.bgBorder, paddingHorizontal: 14, gap: 10,
+                    borderWidth: 1, borderColor: errors.email ? Colors.error : Colors.bgBorder,
+                    paddingHorizontal: 14, gap: 10,
                   }}>
                     <Ionicons name="mail-outline" size={18} color={Colors.textMuted} />
                     <TextInput
@@ -522,7 +509,7 @@ export function LoginScreen({ onClose }: LoginScreenProps) {
                       placeholder="seu@email.com"
                       placeholderTextColor={Colors.textMuted}
                       value={email}
-                      onChangeText={setEmail}
+                      onChangeText={(t) => { setEmail(t); clearError("email"); }}
                       autoCapitalize="none"
                       keyboardType="email-address"
                       autoCorrect={false}
@@ -530,6 +517,9 @@ export function LoginScreen({ onClose }: LoginScreenProps) {
                       maxLength={254}
                     />
                   </View>
+                  {!!errors.email && (
+                    <Text style={{ color: Colors.error, fontSize: 11, marginTop: 4 }}>{errors.email}</Text>
+                  )}
                 </View>
 
                 {/* Campo senha */}
@@ -541,7 +531,8 @@ export function LoginScreen({ onClose }: LoginScreenProps) {
                     <View style={{
                       flexDirection: "row", alignItems: "center",
                       backgroundColor: Colors.bgCardAlt, borderRadius: 12,
-                      borderWidth: 1, borderColor: Colors.bgBorder, paddingHorizontal: 14, gap: 10,
+                      borderWidth: 1, borderColor: errors.password ? Colors.error : Colors.bgBorder,
+                      paddingHorizontal: 14, gap: 10,
                     }}>
                       <Ionicons name="lock-closed-outline" size={18} color={Colors.textMuted} />
                       <TextInput
@@ -549,7 +540,7 @@ export function LoginScreen({ onClose }: LoginScreenProps) {
                         placeholder={mode === "register" ? "Mínimo 8 caracteres" : "••••••••"}
                         placeholderTextColor={Colors.textMuted}
                         value={password}
-                        onChangeText={setPassword}
+                        onChangeText={(t) => { setPassword(t); clearError("password"); }}
                         secureTextEntry={!showPassword}
                         textContentType={mode === "register" ? "newPassword" : "password"}
                         maxLength={128}
@@ -565,13 +556,16 @@ export function LoginScreen({ onClose }: LoginScreenProps) {
                         />
                       </TouchableOpacity>
                     </View>
+                    {!!errors.password && (
+                      <Text style={{ color: Colors.error, fontSize: 11, marginTop: 4 }}>{errors.password}</Text>
+                    )}
                   </View>
                 )}
 
                 {/* Esqueci senha (só no login) */}
                 {mode === "login" && (
                   <TouchableOpacity
-                    onPress={() => setMode("forgot")}
+                    onPress={() => { setMode("forgot"); setErrors({}); }}
                     style={{ alignSelf: "flex-end", marginBottom: 24, marginTop: 4 }}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
@@ -605,7 +599,7 @@ export function LoginScreen({ onClose }: LoginScreenProps) {
 
                 {/* Footer — alternar modo */}
                 {mode === "login" && (
-                  <TouchableOpacity onPress={() => setMode("register")} style={{ alignItems: "center" }}>
+                  <TouchableOpacity onPress={() => { setMode("register"); setErrors({}); }} style={{ alignItems: "center" }}>
                     <Text style={{ color: Colors.textMuted, fontSize: 14 }}>
                       Não tem conta?{" "}
                       <Text style={{ color: Colors.cyan, fontWeight: "700" }}>Criar agora</Text>
@@ -614,7 +608,7 @@ export function LoginScreen({ onClose }: LoginScreenProps) {
                 )}
 
                 {mode === "register" && (
-                  <TouchableOpacity onPress={() => setMode("login")} style={{ alignItems: "center" }}>
+                  <TouchableOpacity onPress={() => { setMode("login"); setErrors({}); }} style={{ alignItems: "center" }}>
                     <Text style={{ color: Colors.textMuted, fontSize: 14 }}>
                       Já tem conta?{" "}
                       <Text style={{ color: Colors.cyan, fontWeight: "700" }}>Entrar</Text>
@@ -623,7 +617,7 @@ export function LoginScreen({ onClose }: LoginScreenProps) {
                 )}
 
                 {mode === "forgot" && (
-                  <TouchableOpacity onPress={() => setMode("login")} style={{ alignItems: "center" }}>
+                  <TouchableOpacity onPress={() => { setMode("login"); setErrors({}); }} style={{ alignItems: "center" }}>
                     <Text style={{ color: Colors.cyan, fontSize: 14, fontWeight: "700" }}>
                       ← Voltar ao login
                     </Text>
@@ -644,7 +638,7 @@ export function LoginScreen({ onClose }: LoginScreenProps) {
               </>
             )}
           </View>
-        </ScrollView>
+      </ScrollView>
       </KeyboardAvoidingView>
 
       {/* Modal de alertas customizado */}

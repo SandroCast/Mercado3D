@@ -157,7 +157,7 @@ export function EditProfileScreen({ visible, onClose }: EditProfileScreenProps) 
     <>
       <Modal
         visible={visible}
-        animationType="slide"
+        animationType="fade"
         statusBarTranslucent
         onRequestClose={onClose}
       >

@@ -6,6 +6,7 @@ export const mockSeller: Seller = {
   rating: 4.8,
   totalSales: 1240,
   verified: true,
+  postalCode: "01310100", // CEP fictício — será preenchido pelo perfil real do vendedor
 };
 
 export const mockBanners: Banner[] = [
@@ -142,6 +143,7 @@ export const mockDigitalProducts: DigitalProduct[] = [
     previewImages: [],
     category: "stl",
     formats: ["STL", "3MF"],
+    formatFiles: {},
     seller: mockSeller,
     rating: 4.9,
     reviewCount: 642,
@@ -160,6 +162,7 @@ export const mockDigitalProducts: DigitalProduct[] = [
     previewImages: [],
     category: "bundle",
     formats: ["STL", "STEP", "3MF"],
+    formatFiles: {},
     seller: mockSeller,
     rating: 4.7,
     reviewCount: 318,

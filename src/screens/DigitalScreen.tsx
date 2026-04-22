@@ -13,23 +13,32 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 
 import { SectionHeader } from "../components/SectionHeader";
-import { mockDigitalProducts } from "../constants/mockData";
+import { ProductDetailScreen } from "./ProductDetailScreen";
 import { useColors } from "../contexts/ThemeContext";
+import { useDigitalProducts, dbToDigitalProduct } from "../contexts/DigitalProductsContext";
 import { DigitalProduct } from "../types";
 
 const { width } = Dimensions.get("window");
 const CARD_W = (width - 16 * 2 - 12) / 2;
 
 const digitalCategories = [
-  { id: "all", label: "Todos" },
-  { id: "miniaturas", label: "Miniaturas" },
-  { id: "decoracao", label: "Decoração" },
-  { id: "engenharia", label: "Engenharia" },
-  { id: "cosplay", label: "Cosplay" },
-  { id: "funcional", label: "Funcional" },
+  { id: "all",    label: "Todos"    },
+  { id: "stl",    label: "STL"      },
+  { id: "obj",    label: "OBJ"      },
+  { id: "step",   label: "STEP"     },
+  { id: "gcode",  label: "G-Code"   },
+  { id: "bundle", label: "Bundle"   },
 ];
 
-function DigitalCard({ product, cardWidth }: { product: DigitalProduct; cardWidth: number }) {
+function DigitalCard({
+  product,
+  cardWidth,
+  onPress,
+}: {
+  product: DigitalProduct;
+  cardWidth: number;
+  onPress: (p: DigitalProduct) => void;
+}) {
   const Colors = useColors();
   const price = product.price === 0
     ? "FREE"
@@ -40,6 +49,7 @@ function DigitalCard({ product, cardWidth }: { product: DigitalProduct; cardWidt
   return (
     <TouchableOpacity
       activeOpacity={0.88}
+      onPress={() => onPress(product)}
       style={{ width: cardWidth, backgroundColor: Colors.bgCard, borderRadius: 14, overflow: "hidden", borderWidth: 1, borderColor: Colors.bgBorder }}
     >
       <View style={{ position: "relative" }}>
@@ -48,11 +58,9 @@ function DigitalCard({ product, cardWidth }: { product: DigitalProduct; cardWidt
           style={{ width: cardWidth, height: cardWidth * 0.8 }}
           resizeMode="cover"
         />
-        {/* Price badge */}
         <View style={{ position: "absolute", top: 8, left: 8, backgroundColor: isFree ? Colors.success : Colors.blue, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 }}>
           <Text style={{ color: "#fff", fontSize: 11, fontWeight: "800" }}>{price}</Text>
         </View>
-        {/* Format */}
         <View style={{ position: "absolute", bottom: 8, left: 8, flexDirection: "row", gap: 4 }}>
           {product.formats.slice(0, 2).map((fmt) => (
             <View key={fmt} style={{ backgroundColor: "#000000aa", borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2 }}>
@@ -67,7 +75,6 @@ function DigitalCard({ product, cardWidth }: { product: DigitalProduct; cardWidt
           {product.title}
         </Text>
 
-        {/* Seller + rating */}
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
             <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: Colors.purple, alignItems: "center", justifyContent: "center" }}>
@@ -83,7 +90,6 @@ function DigitalCard({ product, cardWidth }: { product: DigitalProduct; cardWidt
           </View>
         </View>
 
-        {/* Downloads */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6 }}>
           <Ionicons name="download-outline" size={11} color={Colors.textMuted} />
           <Text style={{ color: Colors.textMuted, fontSize: 10 }}>{product.downloadCount.toLocaleString("pt-BR")} downloads</Text>
@@ -95,19 +101,24 @@ function DigitalCard({ product, cardWidth }: { product: DigitalProduct; cardWidt
 
 interface DigitalScreenProps {
   onBack?: () => void;
+  onLoginRequired?: () => void;
 }
 
-export function DigitalScreen({ onBack }: DigitalScreenProps) {
+export function DigitalScreen({ onBack, onLoginRequired }: DigitalScreenProps) {
   const Colors = useColors();
-  const [selectedCat, setSelectedCat] = useState("all");
+  const { digitalProducts, loading, fetchDigitalProducts } = useDigitalProducts();
+
+  const [selectedCat, setSelectedCat]       = useState("all");
+  const [selectedProduct, setSelectedProduct] = useState<DigitalProduct | null>(null);
+
+  const displayProducts = digitalProducts.map(dbToDigitalProduct);
 
   const filtered = selectedCat === "all"
-    ? mockDigitalProducts
-    : mockDigitalProducts.filter((p) => p.category === selectedCat);
+    ? displayProducts
+    : displayProducts.filter((p) => p.category === selectedCat);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }} edges={["top"]}>
-      {/* Header hero */}
       <LinearGradient
         colors={["#1e1b4b", "#312e81", "#1e1b4b"]}
         style={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 20 }}
@@ -124,7 +135,6 @@ export function DigitalScreen({ onBack }: DigitalScreenProps) {
           </View>
         </View>
 
-        {/* Category chips */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
           {digitalCategories.map((cat) => {
             const active = selectedCat === cat.id;
@@ -142,7 +152,6 @@ export function DigitalScreen({ onBack }: DigitalScreenProps) {
         </ScrollView>
       </LinearGradient>
 
-      {/* Products grid */}
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.id}
@@ -151,6 +160,11 @@ export function DigitalScreen({ onBack }: DigitalScreenProps) {
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         contentContainerStyle={{ paddingTop: 20, paddingBottom: 90 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <View /> as any
+        }
+        onRefresh={fetchDigitalProducts}
+        refreshing={loading}
         ListHeaderComponent={
           <View style={{ marginBottom: 16 }}>
             <SectionHeader title="Arquivos Populares" subtitle="Os modelos mais baixados pela comunidade" onSeeAll={() => {}} />
@@ -159,10 +173,25 @@ export function DigitalScreen({ onBack }: DigitalScreenProps) {
         ListEmptyComponent={
           <View style={{ alignItems: "center", paddingVertical: 60 }}>
             <Ionicons name="cube-outline" size={52} color={Colors.textMuted} />
-            <Text style={{ color: Colors.textMuted, fontSize: 16, fontWeight: "700", marginTop: 12 }}>Nenhum arquivo encontrado</Text>
+            <Text style={{ color: Colors.textMuted, fontSize: 16, fontWeight: "700", marginTop: 12 }}>
+              {loading ? "Carregando..." : "Nenhum arquivo encontrado"}
+            </Text>
           </View>
         }
-        renderItem={({ item }) => <DigitalCard product={item} cardWidth={CARD_W} />}
+        renderItem={({ item }) => (
+          <DigitalCard
+            product={item}
+            cardWidth={CARD_W}
+            onPress={setSelectedProduct}
+          />
+        )}
+      />
+
+      <ProductDetailScreen
+        visible={selectedProduct !== null}
+        product={selectedProduct}
+        onClose={() => setSelectedProduct(null)}
+        onLoginRequired={onLoginRequired}
       />
     </SafeAreaView>
   );

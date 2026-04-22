@@ -1,0 +1,9 @@
+{
+  // Habilita Deno apenas na pasta das Edge Functions, sem afetar o resto do projeto React Native
+  "deno.enablePaths": ["supabase/functions"],
+  "deno.lint": true,
+  "deno.unstable": false,
+
+  // Garante que o TypeScript padrão continue ativo para o restante do projeto
+  "typescript.tsdk": "node_modules/typescript/lib"
+}

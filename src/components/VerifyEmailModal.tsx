@@ -202,7 +202,7 @@ export function VerifyEmailModal({ visible, onClose }: VerifyEmailModalProps) {
       <Modal
         visible={visible}
         transparent
-        animationType="slide"
+        animationType="fade"
         statusBarTranslucent
         onRequestClose={handleClose}
       >

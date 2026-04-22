@@ -14,6 +14,11 @@ import { useAuth } from "../contexts/AuthContext";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { VerifyEmailModal } from "../components/VerifyEmailModal";
 import { EditProfileScreen } from "./EditProfileScreen";
+import { AddressesScreen } from "./AddressesScreen";
+import { OrdersScreen } from "./OrdersScreen";
+import { MyListingsScreen } from "./MyListingsScreen";
+import { MyDigitalFilesScreen } from "./MyDigitalFilesScreen";
+import { MySalesScreen } from "./MySalesScreen";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -37,7 +42,6 @@ const SECTIONS: Section[] = [
     title: "Minhas Atividades",
     items: [
       { icon: "bag-handle-outline",   label: "Minhas Compras",    color: "#22d3ee", badge: "3" },
-      { icon: "heart-outline",        label: "Favoritos",         color: "#f43f5e" },
       { icon: "cube-outline",         label: "Meus Arquivos STL", color: "#7c3aed" },
       { icon: "trending-up-outline",  label: "Minhas Vendas",     color: "#22c55e" },
       { icon: "megaphone-outline",    label: "Meus Anúncios",     color: "#f97316" },
@@ -80,6 +84,7 @@ function MenuItemRow({ item }: { item: MenuItem }) {
   return (
     <TouchableOpacity
       activeOpacity={0.7}
+      onPress={item.onPress}
       style={{
         flexDirection: "row",
         alignItems: "center",
@@ -171,6 +176,23 @@ export function MoreScreen() {
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const [verifyModalVisible, setVerifyModalVisible] = useState(false);
   const [editProfileVisible, setEditProfileVisible] = useState(false);
+  const [addressesVisible,   setAddressesVisible]   = useState(false);
+  const [ordersVisible,      setOrdersVisible]      = useState(false);
+  const [listingsVisible,    setListingsVisible]    = useState(false);
+  const [digitalFilesVisible, setDigitalFilesVisible] = useState(false);
+  const [salesVisible, setSalesVisible] = useState(false);
+
+  const sections = SECTIONS.map((section) => ({
+    ...section,
+    items: section.items.map((item) => {
+      if (item.label === "Endereços")        return { ...item, onPress: () => setAddressesVisible(true) };
+      if (item.label === "Minhas Compras")   return { ...item, onPress: () => setOrdersVisible(true) };
+      if (item.label === "Meus Arquivos STL") return { ...item, onPress: () => setDigitalFilesVisible(true) };
+      if (item.label === "Minhas Vendas")    return { ...item, onPress: () => setSalesVisible(true) };
+      if (item.label === "Meus Anúncios")    return { ...item, onPress: () => setListingsVisible(true) };
+      return item;
+    }),
+  }));
 
   const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
   const displayName: string = user?.user_metadata?.full_name ?? user?.email ?? "";
@@ -318,7 +340,7 @@ export function MoreScreen() {
         </View>
 
         {/* Seções */}
-        {SECTIONS.map((section) => (
+        {sections.map((section) => (
           <SectionBlock key={section.title} section={section} />
         ))}
 
@@ -374,6 +396,31 @@ export function MoreScreen() {
       <EditProfileScreen
         visible={editProfileVisible}
         onClose={() => setEditProfileVisible(false)}
+      />
+
+      <AddressesScreen
+        visible={addressesVisible}
+        onClose={() => setAddressesVisible(false)}
+      />
+
+      <OrdersScreen
+        visible={ordersVisible}
+        onClose={() => setOrdersVisible(false)}
+      />
+
+      <MyDigitalFilesScreen
+        visible={digitalFilesVisible}
+        onClose={() => setDigitalFilesVisible(false)}
+      />
+
+      <MyListingsScreen
+        visible={listingsVisible}
+        onClose={() => setListingsVisible(false)}
+      />
+
+      <MySalesScreen
+        visible={salesVisible}
+        onClose={() => setSalesVisible(false)}
       />
     </SafeAreaView>
   );
