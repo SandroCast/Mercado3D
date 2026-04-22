@@ -28,6 +28,7 @@ import { ReviewsProvider } from "./src/contexts/ReviewsContext";
 import { QuestionsProvider } from "./src/contexts/QuestionsContext";
 import { SalesProvider } from "./src/contexts/SalesContext";
 import { NotificationsProvider } from "./src/contexts/NotificationsContext";
+import { NotificationsScreen } from "./src/screens/NotificationsScreen";
 import { configureGoogleSignIn } from "./src/lib/googleSignIn";
 import { mockProducts, mockDigitalProducts } from "./src/constants/mockData";
 import { Order } from "./src/types";
@@ -64,6 +65,7 @@ function AppContent() {
   const [checkoutVisible, setCheckoutVisible] = useState(false);
   const [confirmedOrder, setConfirmedOrder]   = useState<Order | null>(null);
   const [deepLinkProduct, setDeepLinkProduct]   = useState<ProductDetailItem | null>(null);
+  const [notificationsVisible, setNotificationsVisible] = useState(false);
 
   const handleDeepLink = useCallback((url: string) => {
     const product = resolveProduct(url);
@@ -111,6 +113,7 @@ function AppContent() {
           onProfilePress={() => setActiveTab("profile")}
           onLoginRequired={() => setActiveTab("profile")}
           onCartPress={() => setCartVisible(true)}
+          onNotificationsPress={() => setNotificationsVisible(true)}
         />
       </View>
       <View style={{ flex: 1, display: activeTab === "search" ? "flex" : "none" }}>
@@ -128,6 +131,11 @@ function AppContent() {
       <View style={{ flex: 1, display: activeTab === "profile" ? "flex" : "none" }}>
         {profileRequiresLogin ? <LoginScreen /> : <MoreScreen />}
       </View>
+
+      <NotificationsScreen
+        visible={notificationsVisible}
+        onClose={() => setNotificationsVisible(false)}
+      />
 
       {/* Deep link — abre produto de qualquer tab */}
       <ProductDetailScreen

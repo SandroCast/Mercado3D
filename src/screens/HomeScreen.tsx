@@ -23,9 +23,10 @@ interface HomeScreenProps {
   onProfilePress?: () => void;
   onLoginRequired?: () => void;
   onCartPress?: () => void;
+  onNotificationsPress?: () => void;
 }
 
-export function HomeScreen({ onNavigateToDigital, onProfilePress, onLoginRequired, onCartPress }: HomeScreenProps) {
+export function HomeScreen({ onNavigateToDigital, onProfilePress, onLoginRequired, onCartPress, onNotificationsPress }: HomeScreenProps) {
   const Colors = useColors();
   const { session } = useAuth();
   const { isFavorite, toggleFavorite } = useFavorites();
@@ -59,7 +60,7 @@ export function HomeScreen({ onNavigateToDigital, onProfilePress, onLoginRequire
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }} edges={["top"]}>
-      <Header onProfilePress={onProfilePress} onCartPress={onCartPress} />
+      <Header onProfilePress={onProfilePress} onCartPress={onCartPress} onNotificationsPress={onNotificationsPress} />
 
       <FlatList
         data={displayProducts}

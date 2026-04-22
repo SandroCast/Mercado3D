@@ -10,6 +10,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "../contexts/ThemeContext";
 import { useAuth } from "../contexts/AuthContext";
 import { useCart } from "../contexts/CartContext";
+import { useNotifications } from "../contexts/NotificationsContext";
 
 interface HeaderProps {
   onCartPress?: () => void;
@@ -21,6 +22,7 @@ export function Header({ onCartPress, onProfilePress, onNotificationsPress }: He
   const Colors = useColors();
   const { user } = useAuth();
   const { totalItems: cartCount } = useCart();
+  const { unreadCount } = useNotifications();
 
   const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
   const displayName: string = user?.user_metadata?.full_name ?? user?.email ?? "";
@@ -42,8 +44,13 @@ export function Header({ onCartPress, onProfilePress, onNotificationsPress }: He
         </View>
 
         {/* Notificações */}
-        <TouchableOpacity onPress={onNotificationsPress} activeOpacity={0.7} style={{ padding: 6 }}>
+        <TouchableOpacity onPress={onNotificationsPress} activeOpacity={0.7} style={{ padding: 6, position: "relative" }}>
           <Ionicons name="notifications-outline" size={22} color={Colors.textGray} />
+          {unreadCount > 0 && (
+            <View style={{ position: "absolute", top: 2, right: 2, backgroundColor: Colors.cyan, borderRadius: 8, minWidth: 16, height: 16, alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ color: Colors.bg, fontSize: 9, fontWeight: "700" }}>{unreadCount > 9 ? "9+" : unreadCount}</Text>
+            </View>
+          )}
         </TouchableOpacity>
 
         {/* Cart — apenas para usuários logados */}
