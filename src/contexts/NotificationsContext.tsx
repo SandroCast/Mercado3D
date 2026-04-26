@@ -48,10 +48,16 @@ async function registerToken(userId: string) {
         ? existing
         : (await Notifications.requestPermissionsAsync()).status;
 
-    if (finalStatus !== "granted") return;
+    if (finalStatus !== "granted") {
+      console.warn("registerToken: permission not granted", finalStatus);
+      return;
+    }
 
-    const tokenData = await Notifications.getExpoPushTokenAsync();
+    const tokenData = await Notifications.getExpoPushTokenAsync({
+      projectId: "3bb7554d-efa5-4ace-8a10-ac5026607923",
+    });
     const token = tokenData.data;
+    console.log("registerToken: token obtained", token);
     const platform = Platform.OS === "ios" ? "ios" : "android";
 
     await supabase.from("push_tokens").upsert(
@@ -88,12 +94,23 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     registerToken(user.id);
     fetchNotifications();
 
+    // Real-time: any new row in notifications for this user → refresh immediately
+    const channel = supabase
+      .channel(`notifications:${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
+        () => { fetchNotifications(); }
+      )
+      .subscribe();
+
     notificationListener.current = Notifications.addNotificationReceivedListener((_n) => {
       fetchNotifications();
     });
     responseListener.current = Notifications.addNotificationResponseReceivedListener((_r) => {});
 
     return () => {
+      supabase.removeChannel(channel);
       notificationListener.current?.remove();
       responseListener.current?.remove();
     };
