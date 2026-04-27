@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View, Text, Modal, TouchableOpacity, ScrollView,
   ActivityIndicator, RefreshControl,
@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "../contexts/ThemeContext";
 import { useNotifications, AppNotification } from "../contexts/NotificationsContext";
+import { PendingQuestionsScreen } from "./PendingQuestionsScreen";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -32,7 +33,7 @@ function iconFromTitle(title: string): { name: keyof typeof import("@expo/vector
 
 // ─── NotificationRow ──────────────────────────────────────────────────────────
 
-function NotificationRow({ item, onPress }: { item: AppNotification; onPress: () => void }) {
+function NotificationRow({ item, onPress, hasAction }: { item: AppNotification; onPress: () => void; hasAction: boolean }) {
   const Colors = useColors();
   const { name: iconName, color } = iconFromTitle(item.title);
 
@@ -72,32 +73,56 @@ function NotificationRow({ item, onPress }: { item: AppNotification; onPress: ()
         </Text>
       </View>
 
-      {/* Bolinha não lida */}
-      {!item.read && (
-        <View style={{
-          width: 8, height: 8, borderRadius: 4,
-          backgroundColor: color,
-          marginTop: 6,
-        }} />
-      )}
+      {/* Indicador direito */}
+      <View style={{ alignItems: "center", justifyContent: "center", gap: 4 }}>
+        {!item.read && (
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
+        )}
+        {hasAction && (
+          <Ionicons name="chevron-forward" size={14} color={Colors.textMuted} />
+        )}
+      </View>
     </TouchableOpacity>
   );
 }
 
 // ─── Tela principal ───────────────────────────────────────────────────────────
 
+type NotificationAction = "questions" | "orders" | null;
+
+function resolveAction(n: AppNotification): NotificationAction {
+  const title = n.title.toLowerCase();
+  const data = n.data as Record<string, unknown>;
+  if (title.includes("pergunta") || data?.type === "question") return "questions";
+  if (title.includes("venda") || title.includes("pedido") || data?.orderId) return "orders";
+  return null;
+}
+
 interface Props {
   visible: boolean;
   onClose: () => void;
+  onOpenOrders?: () => void;
 }
 
-export function NotificationsScreen({ visible, onClose }: Props) {
+export function NotificationsScreen({ visible, onClose, onOpenOrders }: Props) {
   const Colors = useColors();
   const { notifications, loading, unreadCount, fetchNotifications, markRead, markAllRead } = useNotifications();
+  const [pendingQuestionsVisible, setPendingQuestionsVisible] = useState(false);
 
   useEffect(() => {
     if (visible) fetchNotifications();
   }, [visible]);
+
+  const handlePress = (item: AppNotification) => {
+    if (!item.read) markRead(item.id);
+    const action = resolveAction(item);
+    if (action === "questions") {
+      setPendingQuestionsVisible(true);
+    } else if (action === "orders") {
+      onClose();
+      onOpenOrders?.();
+    }
+  };
 
   return (
     <Modal visible={visible} animationType="slide" statusBarTranslucent onRequestClose={onClose}>
@@ -163,7 +188,8 @@ export function NotificationsScreen({ visible, onClose }: Props) {
               <View key={item.id}>
                 <NotificationRow
                   item={item}
-                  onPress={() => { if (!item.read) markRead(item.id); }}
+                  onPress={() => handlePress(item)}
+                  hasAction={resolveAction(item) !== null}
                 />
                 {index < notifications.length - 1 && (
                   <View style={{ height: 1, backgroundColor: Colors.bgBorder, marginLeft: 68 }} />
@@ -174,6 +200,11 @@ export function NotificationsScreen({ visible, onClose }: Props) {
           </ScrollView>
         )}
       </SafeAreaView>
+
+      <PendingQuestionsScreen
+        visible={pendingQuestionsVisible}
+        onClose={() => setPendingQuestionsVisible(false)}
+      />
     </Modal>
   );
 }

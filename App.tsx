@@ -135,6 +135,7 @@ function AppContent() {
       <NotificationsScreen
         visible={notificationsVisible}
         onClose={() => setNotificationsVisible(false)}
+        onOpenOrders={() => setActiveTab("profile")}
       />
 
       {/* Deep link — abre produto de qualquer tab */}
