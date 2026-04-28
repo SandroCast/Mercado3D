@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import {
   View, Text, Modal, TouchableOpacity, ScrollView,
-  ActivityIndicator, TextInput, RefreshControl, KeyboardAvoidingView, Platform,
+  ActivityIndicator, TextInput, RefreshControl, KeyboardAvoidingView, Platform, Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -13,6 +13,7 @@ import { ProductQuestion } from "../types";
 
 interface PendingQuestion extends ProductQuestion {
   productTitle: string;
+  productImage?: string;
 }
 
 interface Props {
@@ -46,42 +47,69 @@ export function PendingQuestionsScreen({ visible, onClose }: Props) {
     if (!user) return;
     setLoading(true);
     try {
-      // Fetch pending questions for physical products owned by the user
-      const [physicalRes, digitalRes] = await Promise.all([
-        supabase
-          .from("product_questions")
-          .select("*, products!inner(title, user_id)")
-          .eq("products.user_id", user.id)
-          .eq("product_type", "physical")
-          .is("answer", null)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("product_questions")
-          .select("*, digital_products!inner(title, user_id)")
-          .eq("digital_products.user_id", user.id)
-          .eq("product_type", "digital")
-          .is("answer", null)
-          .order("created_at", { ascending: false }),
+      // Busca IDs e títulos dos produtos do vendedor
+      const [physProds, digProds] = await Promise.all([
+        supabase.from("products").select("id, title, images").eq("user_id", user.id),
+        supabase.from("digital_products").select("id, title, thumbnail_url").eq("user_id", user.id),
       ]);
 
-      const toMapped = (r: Record<string, unknown>, titleKey: string): PendingQuestion => ({
-        id: r.id as string,
-        productId: r.product_id as string,
-        productType: r.product_type as "physical" | "digital",
-        askerId: r.asker_id as string,
-        askerName: r.asker_name as string,
-        question: r.question as string,
-        answer: null,
-        answeredAt: null,
-        createdAt: r.created_at as string,
-        productTitle: (r[titleKey] as { title?: string } | null)?.title ?? "Produto",
-      });
+      const physIds = (physProds.data ?? []).map((p) => p.id as string);
+      const digIds  = (digProds.data ?? []).map((p) => p.id as string);
+      const physTitles: Record<string, string> = Object.fromEntries((physProds.data ?? []).map((p) => [p.id, p.title]));
+      const digTitles:  Record<string, string> = Object.fromEntries((digProds.data ?? []).map((p) => [p.id, p.title]));
+      const physImages: Record<string, string> = Object.fromEntries((physProds.data ?? []).filter((p) => p.images?.[0]).map((p) => [p.id, p.images[0]]));
+      const digImages:  Record<string, string> = Object.fromEntries((digProds.data ?? []).filter((p) => p.thumbnail_url).map((p) => [p.id, p.thumbnail_url]));
 
-      const mapped: PendingQuestion[] = [
-        ...(physicalRes.data ?? []).map((r) => toMapped(r as Record<string, unknown>, "products")),
-        ...(digitalRes.data ?? []).map((r) => toMapped(r as Record<string, unknown>, "digital_products")),
-      ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setQuestions(mapped);
+      const results: PendingQuestion[] = [];
+
+      if (physIds.length > 0) {
+        const { data } = await supabase
+          .from("product_questions")
+          .select("*")
+          .in("product_id", physIds)
+          .eq("product_type", "physical")
+          .is("answer", null)
+          .order("created_at", { ascending: false });
+        (data ?? []).forEach((r) => results.push({
+          id: r.id,
+          productId: r.product_id,
+          productType: "physical",
+          askerId: r.asker_id,
+          askerName: r.asker_name,
+          question: r.question,
+          answer: null,
+          answeredAt: null,
+          createdAt: r.created_at,
+          productTitle: physTitles[r.product_id] ?? "Produto",
+          productImage: physImages[r.product_id],
+        }));
+      }
+
+      if (digIds.length > 0) {
+        const { data } = await supabase
+          .from("product_questions")
+          .select("*")
+          .in("product_id", digIds)
+          .eq("product_type", "digital")
+          .is("answer", null)
+          .order("created_at", { ascending: false });
+        (data ?? []).forEach((r) => results.push({
+          id: r.id,
+          productId: r.product_id,
+          productType: "digital",
+          askerId: r.asker_id,
+          askerName: r.asker_name,
+          question: r.question,
+          answer: null,
+          answeredAt: null,
+          createdAt: r.created_at,
+          productTitle: digTitles[r.product_id] ?? "Produto",
+          productImage: digImages[r.product_id],
+        }));
+      }
+
+      results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setQuestions(results);
     } catch (err) {
       console.warn("fetchPending error:", err);
     } finally {
@@ -169,8 +197,22 @@ export function PendingQuestionsScreen({ visible, onClose }: Props) {
                   borderColor: Colors.bgBorder,
                 }}>
                   {/* Produto */}
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <Ionicons name="cube-outline" size={14} color={Colors.cyan} />
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    {q.productImage ? (
+                      <Image
+                        source={{ uri: q.productImage }}
+                        style={{ width: 36, height: 36, borderRadius: 6 }}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View style={{
+                        width: 36, height: 36, borderRadius: 6,
+                        backgroundColor: Colors.bgCardAlt,
+                        alignItems: "center", justifyContent: "center",
+                      }}>
+                        <Ionicons name="cube-outline" size={18} color={Colors.cyan} />
+                      </View>
+                    )}
                     <Text style={{ color: Colors.cyan, fontSize: 12, fontWeight: "700", flex: 1 }} numberOfLines={1}>
                       {q.productTitle}
                     </Text>
