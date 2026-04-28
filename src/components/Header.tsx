@@ -43,15 +43,17 @@ export function Header({ onCartPress, onProfilePress, onNotificationsPress }: He
           </Text>
         </View>
 
-        {/* Notificações */}
-        <TouchableOpacity onPress={onNotificationsPress} activeOpacity={0.7} style={{ padding: 6, position: "relative" }}>
-          <Ionicons name="notifications-outline" size={22} color={Colors.textGray} />
-          {unreadCount > 0 && (
-            <View style={{ position: "absolute", top: 2, right: 2, backgroundColor: Colors.cyan, borderRadius: 8, minWidth: 16, height: 16, alignItems: "center", justifyContent: "center" }}>
-              <Text style={{ color: Colors.bg, fontSize: 9, fontWeight: "700" }}>{unreadCount > 9 ? "9+" : unreadCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        {/* Notificações — apenas para usuários logados */}
+        {!!user && (
+          <TouchableOpacity onPress={onNotificationsPress} activeOpacity={0.7} style={{ padding: 6, position: "relative" }}>
+            <Ionicons name="notifications-outline" size={22} color={Colors.textGray} />
+            {unreadCount > 0 && (
+              <View style={{ position: "absolute", top: 2, right: 2, backgroundColor: Colors.cyan, borderRadius: 8, minWidth: 16, height: 16, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ color: Colors.bg, fontSize: 9, fontWeight: "700" }}>{unreadCount > 9 ? "9+" : unreadCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        )}
 
         {/* Cart — apenas para usuários logados */}
         {!!user && (

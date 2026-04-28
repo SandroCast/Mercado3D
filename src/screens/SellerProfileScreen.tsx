@@ -8,6 +8,7 @@ import {
   FlatList,
   Dimensions,
   StatusBar,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -75,7 +76,7 @@ export function SellerProfileScreen({
   ];
 
   const handleFavorite = (product: ProductDetailItem) => {
-    if (!session) { onLoginRequired?.(); return; }
+    if (!session) return;
     const isDigitalProduct = "downloadCount" in product;
     toggleFavorite({
       productId:   product.id,
@@ -137,10 +138,19 @@ export function SellerProfileScreen({
               borderColor: Colors.purple,
               alignItems: "center",
               justifyContent: "center",
+              overflow: "hidden",
             }}>
-              <Text style={{ color: Colors.purple, fontSize: 36, fontWeight: "900" }}>
-                {initial}
-              </Text>
+              {seller.avatar ? (
+                <Image
+                  source={{ uri: seller.avatar }}
+                  style={{ width: 88, height: 88 }}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Text style={{ color: Colors.purple, fontSize: 36, fontWeight: "900" }}>
+                  {initial}
+                </Text>
+              )}
             </View>
 
             {/* Nome + verificado */}
@@ -205,13 +215,10 @@ export function SellerProfileScreen({
               ))}
             </View>
 
-            {/* Action buttons */}
-            <View style={{ flexDirection: "row", gap: 10, alignSelf: "stretch", marginTop: 4 }}>
+            {/* Action buttons — only when logged in */}
+            {session && <View style={{ flexDirection: "row", gap: 10, alignSelf: "stretch", marginTop: 4 }}>
               <TouchableOpacity
-                onPress={() => {
-                  if (!session) { onLoginRequired?.(); return; }
-                  toggleFollow(seller.id);
-                }}
+                onPress={() => toggleFollow(seller.id)}
                 activeOpacity={0.8}
                 disabled={followLoading}
                 style={{
@@ -260,7 +267,7 @@ export function SellerProfileScreen({
                   Mensagem
                 </Text>
               </TouchableOpacity>
-            </View>
+            </View>}
           </View>
 
           {/* ── Divider ──────────────────────────────────────────────────────── */}

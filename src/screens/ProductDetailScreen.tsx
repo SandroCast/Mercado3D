@@ -668,8 +668,8 @@ export function ProductDetailScreen({
             {clampText(product.title, 60)}
           </Text>
 
-          {/* Favorite */}
-          <TouchableOpacity
+          {/* Favorite — only when logged in */}
+          {session && <TouchableOpacity
             onPress={() => {
               const isDigitalProduct = isDigital(product);
               const image = isDigitalProduct
@@ -694,7 +694,7 @@ export function ProductDetailScreen({
               size={22}
               color={isFavorite(product.id) ? Colors.error : Colors.textGray}
             />
-          </TouchableOpacity>
+          </TouchableOpacity>}
 
           {/* Share */}
           <TouchableOpacity

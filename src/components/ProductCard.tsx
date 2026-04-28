@@ -3,6 +3,7 @@ import { View, Text, Image, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Product } from "../types";
 import { useColors } from "../contexts/ThemeContext";
+import { useAuth } from "../contexts/AuthContext";
 
 interface ProductCardProps {
   product: Product;
@@ -14,6 +15,7 @@ interface ProductCardProps {
 
 export function ProductCard({ product, onPress, onFavorite, isFavorited = false, width }: ProductCardProps) {
   const Colors = useColors();
+  const { session } = useAuth();
   const discount = product.originalPrice
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : null;
@@ -52,14 +54,16 @@ export function ProductCard({ product, onPress, onFavorite, isFavorited = false,
             <Text style={{ color: "#fff", fontSize: 9, fontWeight: "800" }}>-{discount}%</Text>
           </View>
         )}
-        {/* Favorite */}
-        <TouchableOpacity
-          onPress={() => onFavorite?.(product)}
-          activeOpacity={0.7}
-          style={{ position: "absolute", top: 8, right: 8, backgroundColor: Colors.bgCard + "cc", borderRadius: 20, padding: 6 }}
-        >
-          <Ionicons name={isFavorited ? "heart" : "heart-outline"} size={16} color={isFavorited ? Colors.error : Colors.textGray} />
-        </TouchableOpacity>
+        {/* Favorite — only when logged in */}
+        {session && (
+          <TouchableOpacity
+            onPress={() => onFavorite?.(product)}
+            activeOpacity={0.7}
+            style={{ position: "absolute", top: 8, right: 8, backgroundColor: Colors.bgCard + "cc", borderRadius: 20, padding: 6 }}
+          >
+            <Ionicons name={isFavorited ? "heart" : "heart-outline"} size={16} color={isFavorited ? Colors.error : Colors.textGray} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Info */}

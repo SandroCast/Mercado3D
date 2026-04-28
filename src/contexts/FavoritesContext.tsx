@@ -13,6 +13,7 @@ export interface FavoriteItem {
   imageUrl?: string;
   sellerName?: string;
   createdAt: string;
+  deleted?: boolean;
 }
 
 export interface FavoriteInput {
@@ -74,7 +75,31 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      setFavorites((data ?? []).map(fromRow));
+
+      const items = (data ?? []).map(fromRow);
+
+      // Check which products still exist
+      const physicalIds = items.filter((f) => f.productType === "physical").map((f) => f.productId);
+      const digitalIds  = items.filter((f) => f.productType === "digital").map((f) => f.productId);
+
+      const existingPhysical = new Set<string>();
+      const existingDigital  = new Set<string>();
+
+      if (physicalIds.length > 0) {
+        const { data: rows } = await supabase.from("products").select("id").in("id", physicalIds);
+        (rows ?? []).forEach((r: { id: string }) => existingPhysical.add(r.id));
+      }
+      if (digitalIds.length > 0) {
+        const { data: rows } = await supabase.from("digital_products").select("id").in("id", digitalIds);
+        (rows ?? []).forEach((r: { id: string }) => existingDigital.add(r.id));
+      }
+
+      setFavorites(items.map((f) => ({
+        ...f,
+        deleted: f.productType === "physical"
+          ? !existingPhysical.has(f.productId)
+          : !existingDigital.has(f.productId),
+      })));
     } catch (err) {
       console.warn("fetchFavorites error:", err);
     } finally {

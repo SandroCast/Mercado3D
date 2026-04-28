@@ -48,16 +48,12 @@ async function registerToken(userId: string) {
         ? existing
         : (await Notifications.requestPermissionsAsync()).status;
 
-    if (finalStatus !== "granted") {
-      console.warn("registerToken: permission not granted", finalStatus);
-      return;
-    }
+    if (finalStatus !== "granted") return;
 
     const tokenData = await Notifications.getExpoPushTokenAsync({
       projectId: "3bb7554d-efa5-4ace-8a10-ac5026607923",
     });
     const token = tokenData.data;
-    console.log("registerToken: token obtained", token);
     const platform = Platform.OS === "ios" ? "ios" : "android";
 
     await supabase.from("push_tokens").upsert(

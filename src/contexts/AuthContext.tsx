@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
+import * as Notifications from "expo-notifications";
 import { supabase } from "../lib/supabase";
 
 interface AuthContextValue {
@@ -48,6 +49,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = async () => {
+    try {
+      const tokenData = await Notifications.getExpoPushTokenAsync({
+        projectId: "3bb7554d-efa5-4ace-8a10-ac5026607923",
+      });
+      await supabase.from("push_tokens").delete().eq("token", tokenData.data);
+    } catch {
+      // ignora se não conseguir obter o token
+    }
     await supabase.auth.signOut();
   };
 
