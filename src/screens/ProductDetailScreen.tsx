@@ -568,13 +568,15 @@ export function ProductDetailScreen({
         productType: digital ? "digital" : "physical",
         question: questionText,
       });
-      // Notify seller about new question
-      await sendPush({
-        toUserId: product.seller.id,
-        title: "❓ Nova pergunta",
-        body: `Alguém perguntou sobre "${product.title}".`,
-        data: { productId: product.id },
-      });
+      // Notify seller about new question (skip if user is the seller)
+      if (product.seller.id && product.seller.id !== session?.user.id) {
+        await sendPush({
+          toUserId: product.seller.id,
+          title: "❓ Nova pergunta",
+          body: `Alguém perguntou sobre "${product.title}".`,
+          data: { type: "question", productId: product.id, productType: digital ? "digital" : "physical" },
+        });
+      }
       setQuestionText("");
     } catch (err) {
       console.warn("askQuestion error:", err);
@@ -588,13 +590,19 @@ export function ProductDetailScreen({
     setSubmittingAnswer(true);
     try {
       await answerQuestion(answeringQuestion.id, answerText);
-      // Notify buyer about the answer
-      await sendPush({
-        toUserId: answeringQuestion.askerId,
-        title: "💬 Sua pergunta foi respondida",
-        body: `O vendedor respondeu: "${answerText.trim().slice(0, 80)}"`,
-        data: { productId: answeringQuestion.productId },
-      });
+      // Notify buyer about the answer (skip if seller is answering their own question)
+      if (answeringQuestion.askerId !== session?.user.id) {
+        await sendPush({
+          toUserId: answeringQuestion.askerId,
+          title: "💬 Sua pergunta foi respondida",
+          body: `O vendedor respondeu: "${answerText.trim().slice(0, 80)}"`,
+          data: {
+            type: "answer",
+            productId: answeringQuestion.productId,
+            productType: answeringQuestion.productType,
+          },
+        });
+      }
       setAnsweringQuestion(null);
       setAnswerText("");
     } catch (err) {

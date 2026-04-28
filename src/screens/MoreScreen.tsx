@@ -431,7 +431,8 @@ export function MoreScreen() {
       <NotificationsScreen
         visible={notificationsVisible}
         onClose={() => setNotificationsVisible(false)}
-        onOpenOrders={() => { setNotificationsVisible(false); setSalesVisible(true); }}
+        onOpenSales={() => { setNotificationsVisible(false); setSalesVisible(true); }}
+        onOpenPurchases={() => { setNotificationsVisible(false); setOrdersVisible(true); }}
       />
     </SafeAreaView>
   );

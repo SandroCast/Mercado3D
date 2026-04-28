@@ -62,7 +62,7 @@ async function registerToken(userId: string) {
 
     await supabase.from("push_tokens").upsert(
       { user_id: userId, token, platform, updated_at: new Date().toISOString() },
-      { onConflict: "user_id,token" }
+      { onConflict: "token" }
     );
   } catch (err) {
     console.warn("registerToken error:", err);

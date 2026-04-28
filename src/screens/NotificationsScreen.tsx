@@ -8,6 +8,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "../contexts/ThemeContext";
 import { useNotifications, AppNotification } from "../contexts/NotificationsContext";
 import { PendingQuestionsScreen } from "./PendingQuestionsScreen";
+import { ProductDetailScreen, ProductDetailItem } from "./ProductDetailScreen";
+import { supabase } from "../lib/supabase";
+import { dbToProduct } from "../contexts/ProductsContext";
+import { dbToDigitalProduct } from "../contexts/DigitalProductsContext";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -86,41 +90,114 @@ function NotificationRow({ item, onPress, hasAction }: { item: AppNotification; 
   );
 }
 
+// ─── Fetch helper ─────────────────────────────────────────────────────────────
+
+async function fetchProductById(
+  productId: string,
+  productType: "physical" | "digital"
+): Promise<ProductDetailItem | null> {
+  try {
+    if (productType === "physical") {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*, profiles:user_id(full_name, avatar_url, email)")
+        .eq("id", productId)
+        .single();
+      if (error || !data) return null;
+      return dbToProduct({
+        id: data.id, userId: data.user_id, title: data.title, description: data.description,
+        price: Number(data.price), originalPrice: data.original_price ? Number(data.original_price) : undefined,
+        brand: data.brand ?? undefined, category: data.category, condition: data.condition,
+        images: data.images ?? [], inStock: data.in_stock, freeShipping: data.free_shipping,
+        variantAttributes: data.variant_attributes ?? [], rating: Number(data.rating),
+        reviewCount: data.review_count, createdAt: data.created_at,
+        sellerName: (data.profiles as any)?.full_name ?? (data.profiles as any)?.email ?? "Vendedor",
+        sellerAvatar: (data.profiles as any)?.avatar_url ?? undefined,
+      });
+    } else {
+      const { data, error } = await supabase
+        .from("digital_products")
+        .select("*, profiles:user_id(full_name, avatar_url, email)")
+        .eq("id", productId)
+        .single();
+      if (error || !data) return null;
+      return dbToDigitalProduct({
+        id: data.id, userId: data.user_id, title: data.title, description: data.description,
+        price: Number(data.price), originalPrice: data.original_price ? Number(data.original_price) : undefined,
+        category: data.category, thumbnail: data.thumbnail, previewImages: data.preview_images ?? [],
+        formats: data.formats ?? [], formatFiles: data.format_files ?? {},
+        printDifficulty: data.print_difficulty, supportRequired: data.support_required,
+        license: data.license ?? undefined, downloadCount: data.download_count,
+        rating: Number(data.rating), reviewCount: data.review_count, createdAt: data.created_at,
+        sellerName: (data.profiles as any)?.full_name ?? (data.profiles as any)?.email ?? "Vendedor",
+        sellerAvatar: (data.profiles as any)?.avatar_url ?? undefined,
+      });
+    }
+  } catch {
+    return null;
+  }
+}
+
 // ─── Tela principal ───────────────────────────────────────────────────────────
 
-type NotificationAction = "questions" | "orders" | null;
+type NotificationAction =
+  | { type: "questions" }
+  | { type: "product"; productId: string; productType: "physical" | "digital" }
+  | { type: "sales" }
+  | { type: "purchases" }
+  | null;
 
 function resolveAction(n: AppNotification): NotificationAction {
   const title = n.title.toLowerCase();
   const data = n.data as Record<string, unknown>;
-  if (title.includes("pergunta") || data?.type === "question") return "questions";
-  if (title.includes("venda") || title.includes("pedido") || data?.orderId) return "orders";
+  const nType = data?.type as string | undefined;
+
+  if (nType === "question" || title.includes("pergunta")) return { type: "questions" };
+  if (
+    nType === "answer" &&
+    typeof data.productId === "string" &&
+    (data.productType === "physical" || data.productType === "digital")
+  ) {
+    return { type: "product", productId: data.productId, productType: data.productType };
+  }
+  if (nType === "sale" || title.includes("venda")) return { type: "sales" };
+  if (nType === "order" || title.includes("pedido") || typeof data?.orderId === "string") return { type: "purchases" };
   return null;
 }
 
 interface Props {
   visible: boolean;
   onClose: () => void;
-  onOpenOrders?: () => void;
+  onOpenSales?: () => void;
+  onOpenPurchases?: () => void;
 }
 
-export function NotificationsScreen({ visible, onClose, onOpenOrders }: Props) {
+export function NotificationsScreen({ visible, onClose, onOpenSales, onOpenPurchases }: Props) {
   const Colors = useColors();
   const { notifications, loading, unreadCount, fetchNotifications, markRead, markAllRead } = useNotifications();
   const [pendingQuestionsVisible, setPendingQuestionsVisible] = useState(false);
+  const [productToOpen, setProductToOpen] = useState<ProductDetailItem | null>(null);
 
   useEffect(() => {
     if (visible) fetchNotifications();
   }, [visible]);
 
-  const handlePress = (item: AppNotification) => {
+  const handlePress = async (item: AppNotification) => {
     if (!item.read) markRead(item.id);
     const action = resolveAction(item);
-    if (action === "questions") {
+    if (!action) return;
+
+    if (action.type === "questions") {
       setPendingQuestionsVisible(true);
-    } else if (action === "orders") {
+    } else if (action.type === "product") {
+      const product = await fetchProductById(action.productId, action.productType);
+      if (product) setProductToOpen(product);
+    } else if (action.type === "sales") {
       onClose();
-      onOpenOrders?.();
+      onOpenSales?.();
+    } else if (action.type === "purchases") {
+      onClose();
+      onOpenPurchases?.();
     }
   };
 
@@ -204,6 +281,12 @@ export function NotificationsScreen({ visible, onClose, onOpenOrders }: Props) {
       <PendingQuestionsScreen
         visible={pendingQuestionsVisible}
         onClose={() => setPendingQuestionsVisible(false)}
+      />
+
+      <ProductDetailScreen
+        visible={productToOpen !== null}
+        product={productToOpen}
+        onClose={() => setProductToOpen(null)}
       />
     </Modal>
   );

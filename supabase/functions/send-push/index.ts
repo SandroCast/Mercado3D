@@ -59,6 +59,19 @@ serve(async (req) => {
     });
 
     const result = await res.json();
+
+    // Remove tokens that are no longer valid (device changed, app uninstalled, etc.)
+    const invalidTokens: string[] = [];
+    const ticketArray = Array.isArray(result.data) ? result.data : [];
+    ticketArray.forEach((ticket: { status: string; details?: { error?: string } }, i: number) => {
+      if (ticket.status === "error" && ticket.details?.error === "DeviceNotRegistered") {
+        invalidTokens.push(rows[i].token);
+      }
+    });
+    if (invalidTokens.length > 0) {
+      await supabase.from("push_tokens").delete().in("token", invalidTokens);
+    }
+
     return new Response(JSON.stringify({ sent: messages.length, result }), { status: 200 });
   } catch (err) {
     return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
