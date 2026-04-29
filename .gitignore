@@ -47,3 +47,6 @@ yarn-error.*
 # Firebase / Google Services
 google-services.json
 GoogleService-Info.plist
+
+# Supabase
+supabase/.temp/
