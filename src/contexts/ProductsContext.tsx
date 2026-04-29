@@ -42,6 +42,10 @@ export interface DBProduct {
   createdAt:         string;
   sellerName:        string;
   sellerAvatar?:     string;
+  weightKg?:         number;
+  lengthCm?:         number;
+  widthCm?:          number;
+  heightCm?:         number;
 }
 
 export interface CreateProductInput {
@@ -57,6 +61,10 @@ export interface CreateProductInput {
   freeShipping:       boolean;
   variantAttributes?: string[];
   variants?:          VariantInput[];
+  weightKg?:          number;
+  lengthCm?:          number;
+  widthCm?:           number;
+  heightCm?:          number;
 }
 
 // ─── Mapper ───────────────────────────────────────────────────────────────────
@@ -79,8 +87,12 @@ function fromRow(row: any): DBProduct {
     rating:            Number(row.rating),
     reviewCount:       row.review_count,
     createdAt:         row.created_at,
-    sellerName:        row.profiles?.full_name ?? row.profiles?.email ?? "Vendedor",
+    sellerName:    row.profiles?.full_name ?? row.profiles?.email ?? "Vendedor",
     sellerAvatar:  row.profiles?.avatar_url ?? undefined,
+    weightKg:      row.weight_kg ? Number(row.weight_kg) : undefined,
+    lengthCm:      row.length_cm ? Number(row.length_cm) : undefined,
+    widthCm:       row.width_cm  ? Number(row.width_cm)  : undefined,
+    heightCm:      row.height_cm ? Number(row.height_cm) : undefined,
   };
 }
 
@@ -225,6 +237,10 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
         in_stock:           hasVariants ? variants!.some((v) => v.stock > 0) : input.inStock,
         free_shipping:      input.freeShipping,
         variant_attributes: input.variantAttributes ?? [],
+        weight_kg:          input.weightKg ?? null,
+        length_cm:          input.lengthCm ?? null,
+        width_cm:           input.widthCm  ?? null,
+        height_cm:          input.heightCm ?? null,
       })
       .select(PRODUCT_QUERY)
       .single();
@@ -249,6 +265,10 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
     if (input.inStock            !== undefined) patch.in_stock           = input.inStock;
     if (input.freeShipping       !== undefined) patch.free_shipping      = input.freeShipping;
     if (input.variantAttributes  !== undefined) patch.variant_attributes = input.variantAttributes;
+    if (input.weightKg           !== undefined) patch.weight_kg          = input.weightKg ?? null;
+    if (input.lengthCm           !== undefined) patch.length_cm          = input.lengthCm ?? null;
+    if (input.widthCm            !== undefined) patch.width_cm           = input.widthCm  ?? null;
+    if (input.heightCm           !== undefined) patch.height_cm          = input.heightCm ?? null;
 
     const { data, error } = await supabase
       .from("products")
