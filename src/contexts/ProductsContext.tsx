@@ -16,11 +16,12 @@ export interface ProductVariant {
 }
 
 export interface VariantInput {
-  attributes: Record<string, string>;
-  stock:      number;
-  price?:     number;
-  sku?:       string;
-  images?:    string[];
+  attributes:     Record<string, string>;
+  stock:          number;
+  price?:         number;
+  originalPrice?: number;
+  sku?:           string;
+  images?:        string[];
 }
 
 export interface DBProduct {

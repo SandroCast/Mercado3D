@@ -30,7 +30,7 @@ import { supabase } from "../lib/supabase";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const CATEGORIES = [
+const CATEGORIES_EQUIPMENT = [
   { id: "impressoras",  label: "Impressoras 3D",  icon: "print-outline"          as const },
   { id: "filamentos",   label: "Filamentos",       icon: "color-palette-outline"  as const },
   { id: "pecas",        label: "Peças",            icon: "construct-outline"      as const },
@@ -40,43 +40,57 @@ const CATEGORIES = [
   { id: "outros",       label: "Outros",           icon: "grid-outline"           as const },
 ];
 
-const TOTAL_STEPS = 6;
+const CATEGORIES_PRINTED = [
+  { id: "miniaturas",    label: "Miniaturas",        icon: "person-outline"         as const },
+  { id: "decoracao",     label: "Decoração",         icon: "home-outline"           as const },
+  { id: "utilidades",    label: "Utilidades",        icon: "bulb-outline"           as const },
+  { id: "prototipos",    label: "Protótipos",        icon: "flask-outline"          as const },
+  { id: "pecas_custom",  label: "Peças Customizadas",icon: "construct-outline"      as const },
+  { id: "joias",         label: "Joias e Bijuterias",icon: "diamond-outline"        as const },
+  { id: "educacao",      label: "Educação",          icon: "school-outline"         as const },
+  { id: "games",         label: "Games e Geek",      icon: "game-controller-outline"as const },
+  { id: "outros",        label: "Outros",            icon: "grid-outline"           as const },
+];
+
+const TOTAL_STEPS = 5;
 
 const STEP_TITLES: Record<number, string> = {
   1: "Categoria",
   2: "Detalhes",
   3: "Variantes",
-  4: "Preço",
-  5: "Dados de Envio",
-  6: "Revisar",
+  4: "Dados de Envio",
+  5: "Revisar",
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface VariantRow {
-  localId:    string;
-  attributes: Record<string, string>;
-  stock:      string;
-  price:      string;
-  images:     string[];
+  localId:       string;
+  attributes:    Record<string, string>;
+  stock:         string;
+  price:         string;
+  originalPrice: string;
+  images:        string[];
 }
 
 function makeVariant(): VariantRow {
   return {
-    localId:    Math.random().toString(36).slice(2),
-    attributes: {},
-    stock:      "1",
-    price:      "",
-    images:     [],
+    localId:       Math.random().toString(36).slice(2),
+    attributes:    {},
+    stock:         "1",
+    price:         "",
+    originalPrice: "",
+    images:        [],
   };
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface CreateListingScreenProps {
-  visible:      boolean;
-  onClose:      () => void;
-  editProduct?: DBProduct;
+  visible:       boolean;
+  onClose:       () => void;
+  editProduct?:  DBProduct;
+  listingType?:  "printed" | "equipment";
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -85,6 +99,7 @@ export function CreateListingScreen({
   visible,
   onClose,
   editProduct,
+  listingType = "equipment",
 }: CreateListingScreenProps) {
   const Colors = useColors();
   const { user }   = useAuth();
@@ -106,8 +121,6 @@ export function CreateListingScreen({
   const [attributeSuggestions, setAttributeSuggestions] = useState<Record<string, string[]>>({});
   const [aiSuggestionUsed,    setAiSuggestionUsed]    = useState(false);
   const [variants,      setVariants]      = useState<VariantRow[]>([makeVariant()]);
-  const [price,         setPrice]         = useState("");
-  const [originalPrice, setOriginalPrice] = useState("");
   const [freeShipping,  setFreeShipping]  = useState(false);
   const [weightKg,      setWeightKg]      = useState("");
   const [lengthCm,      setLengthCm]      = useState("");
@@ -123,9 +136,8 @@ export function CreateListingScreen({
     setTitle(editProduct.title);
     setBrand(editProduct.brand ?? "");
     setDescription(editProduct.description);
-    setPrice(editProduct.price.toFixed(2));
-    setOriginalPrice(editProduct.originalPrice?.toFixed(2) ?? "");
     setFreeShipping(editProduct.freeShipping);
+    setAiSuggestionUsed(true);
     setWeightKg(editProduct.weightKg?.toString() ?? "");
     setLengthCm(editProduct.lengthCm?.toString() ?? "");
     setWidthCm(editProduct.widthCm?.toString()   ?? "");
@@ -135,12 +147,13 @@ export function CreateListingScreen({
       if (dbV.length > 0) {
         const keys = [...new Set(dbV.flatMap((v) => Object.keys(v.attributes)))];
         setAttributeKeys(keys);
-        setVariants(dbV.map((v) => ({
-          localId:    v.id,
-          attributes: v.attributes,
-          stock:      v.stock.toString(),
-          price:      v.price?.toFixed(2) ?? "",
-          images:     v.images,
+        setVariants(dbV.map((v, i) => ({
+          localId:       v.id,
+          attributes:    v.attributes,
+          stock:         v.stock.toString(),
+          price:         v.price?.toFixed(2) ?? (i === 0 ? editProduct!.price.toFixed(2) : ""),
+          originalPrice: i === 0 ? (editProduct!.originalPrice?.toFixed(2) ?? "") : "",
+          images:        v.images,
         })));
       } else {
         setAttributeKeys([]);
@@ -155,7 +168,7 @@ export function CreateListingScreen({
     setTitle(""); setBrand(""); setDescription("");
     setAttributeKeys([]); setAttributeSuggestions({}); setAiSuggestionUsed(false);
     setVariants([makeVariant()]);
-    setPrice(""); setOriginalPrice(""); setFreeShipping(false);
+    setFreeShipping(false);
     setWeightKg(""); setLengthCm(""); setWidthCm(""); setHeightCm("");
     setSaving(false);
     onClose();
@@ -167,13 +180,15 @@ export function CreateListingScreen({
       case 2: return title.trim().length >= 3 && description.trim().length >= 3;
       case 3: return (
         variants.length > 0 &&
+        parseFloat(variants[0].price) > 0 &&
         variants.every((v) => {
-          const s = parseInt(v.stock);
-          return !isNaN(s) && s >= 0 && v.images.length > 0;
+          const s  = parseInt(v.stock);
+          const p  = parseFloat(v.price) || 0;
+          const op = parseFloat(v.originalPrice) || 0;
+          return !isNaN(s) && s >= 0 && v.images.length > 0 && (!v.originalPrice || op > p);
         })
       );
-      case 4: return parseFloat(price) > 0;
-      case 5: return (
+      case 4: return (
         parseFloat(weightKg) > 0 &&
         parseFloat(lengthCm) > 0 &&
         parseFloat(widthCm)  > 0 &&
@@ -201,10 +216,11 @@ export function CreateListingScreen({
         const remoteImgs = v.images.filter((u) =>  u.startsWith("http"));
         const uploaded   = localImgs.length > 0 ? await uploadImages(user.id, localImgs) : [];
         return {
-          attributes: attrs,
-          stock: Math.max(0, parseInt(v.stock) || 0),
-          price: v.price ? parseFloat(v.price) : undefined,
-          images: [...remoteImgs, ...uploaded],
+          attributes:    attrs,
+          stock:         Math.max(0, parseInt(v.stock) || 0),
+          price:         v.price ? parseFloat(v.price) : undefined,
+          originalPrice: v.originalPrice ? parseFloat(v.originalPrice) : undefined,
+          images:        [...remoteImgs, ...uploaded],
         };
       }));
 
@@ -217,11 +233,12 @@ export function CreateListingScreen({
         ...new Set(variantInputs.flatMap((v) => Object.keys(v.attributes))),
       ];
 
+      const v0 = variantInputs[0];
       const input: CreateProductInput = {
         title:             title.trim(),
         description:       description.trim(),
-        price:             parseFloat(price),
-        originalPrice:     originalPrice ? parseFloat(originalPrice) : undefined,
+        price:             v0.price ?? 0,
+        originalPrice:     v0.originalPrice,
         brand:             brand.trim() || undefined,
         category,
         condition,
@@ -259,6 +276,7 @@ export function CreateListingScreen({
         <Step1Category
           category={category}   setCategory={setCategory}
           condition={condition} setCondition={setCondition}
+          categories={listingType === "printed" ? CATEGORIES_PRINTED : CATEGORIES_EQUIPMENT}
         />
       );
       case 2: return (
@@ -278,12 +296,6 @@ export function CreateListingScreen({
         />
       );
       case 4: return (
-        <Step4Pricing
-          price={price}                 setPrice={setPrice}
-          originalPrice={originalPrice} setOriginalPrice={setOriginalPrice}
-        />
-      );
-      case 5: return (
         <Step5Shipping
           weightKg={weightKg}     setWeightKg={setWeightKg}
           lengthCm={lengthCm}     setLengthCm={setLengthCm}
@@ -292,13 +304,12 @@ export function CreateListingScreen({
           freeShipping={freeShipping} setFreeShipping={setFreeShipping}
         />
       );
-      case 6: return (
+      case 5: return (
         <Step6Review
           title={title}           brand={brand}
           category={category}     condition={condition}
           attributeKeys={attributeKeys}
           variants={variants}
-          price={price}           originalPrice={originalPrice}
           freeShipping={freeShipping}
           weightKg={weightKg}     lengthCm={lengthCm}
           widthCm={widthCm}       heightCm={heightCm}
@@ -451,10 +462,11 @@ export function CreateListingScreen({
 // ─── Step 1: Categoria ────────────────────────────────────────────────────────
 
 function Step1Category({
-  category, setCategory, condition, setCondition,
+  category, setCategory, condition, setCondition, categories,
 }: {
   category: string;          setCategory:  (v: string) => void;
   condition: "new" | "used"; setCondition: (v: "new" | "used") => void;
+  categories: { id: string; label: string; icon: any }[];
 }) {
   const Colors = useColors();
   return (
@@ -464,7 +476,7 @@ function Step1Category({
           Selecione a categoria *
         </Text>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-          {CATEGORIES.map((cat) => {
+          {categories.map((cat) => {
             const sel = category === cat.id;
             return (
               <TouchableOpacity
@@ -639,7 +651,7 @@ function Step4Variants({
   const updateImages = (localId: string, imgs: string[]) =>
     setVariants((prev) => prev.map((v) => v.localId === localId ? { ...v, images: imgs } : v));
 
-  const updateField = (localId: string, field: "stock" | "price", val: string) =>
+  const updateField = (localId: string, field: "stock" | "price" | "originalPrice", val: string) =>
     setVariants((prev) => prev.map((v) => v.localId === localId ? { ...v, [field]: val } : v));
 
   const removeVariant = (localId: string) => {
@@ -850,7 +862,7 @@ function VariantCard({
   attributeSuggestions: Record<string, string[]>;
   canDelete:            boolean;
   onUpdateAttr:         (key: string, val: string) => void;
-  onUpdateField:        (field: "stock" | "price", val: string) => void;
+  onUpdateField:        (field: "stock" | "price" | "originalPrice", val: string) => void;
   onUpdateImages:       (images: string[]) => void;
   onDelete:             () => void;
 }) {
@@ -955,18 +967,58 @@ function VariantCard({
         </View>
         <View style={{ flex: 1 }}>
           <Text style={{ color: Colors.textGray, fontSize: 12, fontWeight: "600", marginBottom: 6 }}>
-            Preço da variante
+            {index === 0 ? "Preço *" : "Preço"}
           </Text>
           <TextInput
             value={variant.price}
             onChangeText={(val) => onUpdateField("price", val.replace(/[^\d.,]/g, "").replace(",", "."))}
             keyboardType="decimal-pad"
-            placeholder="Padrão"
+            placeholder={index === 0 ? "0,00" : "Padrão"}
             placeholderTextColor={Colors.textMuted}
             style={fieldStyle}
           />
         </View>
       </View>
+
+      {/* Original Price — for variants 2+, only show if price is filled */}
+      {(index === 0 || parseFloat(variant.price) > 0) && (() => {
+        const p  = parseFloat(variant.price)         || 0;
+        const op = parseFloat(variant.originalPrice) || 0;
+        const discount = op > p && p > 0 ? Math.round(((op - p) / op) * 100) : null;
+        const hasError = !!variant.originalPrice && op > 0 && op <= p;
+        return (
+          <View style={{ gap: 4 }}>
+            <Text style={{ color: Colors.textGray, fontSize: 12, fontWeight: "600" }}>
+              Preço original <Text style={{ color: Colors.textMuted, fontWeight: "400" }}>(opcional — riscado)</Text>
+            </Text>
+            <TextInput
+              value={variant.originalPrice}
+              onChangeText={(val) => onUpdateField("originalPrice", val.replace(/[^\d.,]/g, "").replace(",", "."))}
+              keyboardType="decimal-pad"
+              placeholder="0,00"
+              placeholderTextColor={Colors.textMuted}
+              style={[fieldStyle, hasError ? { borderColor: Colors.error } : {}]}
+            />
+            {hasError && (
+              <Text style={{ color: Colors.error, fontSize: 11 }}>
+                Preço original deve ser maior que o preço base
+              </Text>
+            )}
+            {discount !== null && (
+              <View style={{
+                flexDirection: "row", alignItems: "center", gap: 6,
+                backgroundColor: Colors.success + "15", borderRadius: 8, padding: 8,
+                borderWidth: 1, borderColor: Colors.success + "44",
+              }}>
+                <Ionicons name="pricetag-outline" size={14} color={Colors.success} />
+                <Text style={{ color: Colors.success, fontSize: 12, fontWeight: "600" }}>
+                  {discount}% de desconto será exibido
+                </Text>
+              </View>
+            )}
+          </View>
+        );
+      })()}
 
       {/* Fotos da variante */}
       <View>
@@ -1094,9 +1146,14 @@ function Step4Pricing({
             keyboardType="decimal-pad"
             placeholder="0,00"
             placeholderTextColor={Colors.textMuted}
-            style={inputStyle}
+            style={[inputStyle, originalPrice && op > 0 && op <= p ? { borderColor: Colors.error } : {}]}
           />
         </View>
+        {!!originalPrice && op > 0 && op <= p && (
+          <Text style={{ color: Colors.error, fontSize: 12, marginTop: 4 }}>
+            Preço original deve ser maior que o preço base
+          </Text>
+        )}
       </View>
 
       {discount !== null && (
@@ -1244,14 +1301,13 @@ function Step5Shipping({
 // ─── Step 6: Revisar ──────────────────────────────────────────────────────────
 
 function Step6Review({
-  title, brand, category, condition, attributeKeys, variants, price, originalPrice, freeShipping,
+  title, brand, category, condition, attributeKeys, variants, freeShipping,
   weightKg, lengthCm, widthCm, heightCm,
 }: {
   title: string;        brand: string;
   category: string;     condition: "new" | "used";
   attributeKeys: string[];
   variants: VariantRow[];
-  price: string;        originalPrice: string;
   freeShipping: boolean;
   weightKg: string;     lengthCm: string;
   widthCm: string;      heightCm: string;
@@ -1260,9 +1316,9 @@ function Step6Review({
   const cover       = variants[0]?.images[0];
   const totalStock  = variants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0);
   const totalPhotos = variants.reduce((sum, v) => sum + v.images.length, 0);
-  const catLabel    = CATEGORIES.find((c) => c.id === category)?.label ?? category;
-  const p           = parseFloat(price) || 0;
-  const op          = parseFloat(originalPrice) || 0;
+  const catLabel    = [...CATEGORIES_EQUIPMENT, ...CATEGORIES_PRINTED].find((c) => c.id === category)?.label ?? category;
+  const p           = parseFloat(variants[0]?.price) || 0;
+  const op          = parseFloat(variants[0]?.originalPrice) || 0;
   const discount    = op > p && p > 0
     ? Math.round(((op - p) / op) * 100)
     : null;

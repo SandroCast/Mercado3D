@@ -156,7 +156,13 @@ export function CreateDigitalListingScreen({
 
   const canProceed = (): boolean => {
     switch (step) {
-      case 1: return !!category && (isFree || parseFloat(price) > 0);
+      case 1: {
+        if (!category) return false;
+        if (isFree) return true;
+        const p  = parseFloat(price);
+        const op = parseFloat(originalPrice);
+        return p > 0 && (!originalPrice || op > p);
+      }
       case 2: return previewImages.length > 0;
       case 3: return title.trim().length >= 3 && description.trim().length >= 10;
       case 4: return formats.length > 0 && formats.every((fmt) => !!formatFiles[fmt]) && !!license;
@@ -615,55 +621,73 @@ function Step1Category({
           />
         </View>
 
-        {!isFree && (
-          <>
-            <View>
-              <Text style={{ color: Colors.textGray, fontSize: 13, fontWeight: "600", marginBottom: 8 }}>
-                Preço *
-              </Text>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Text style={{ color: Colors.textGray, fontSize: 18, fontWeight: "700" }}>R$</Text>
-                <TextInput
-                  value={price}
-                  onChangeText={(v) => setPrice(clean(v))}
-                  keyboardType="decimal-pad"
-                  placeholder="0,00"
-                  placeholderTextColor={Colors.textMuted}
-                  style={{
-                    flex: 1,
-                    backgroundColor: Colors.bgCard, borderRadius: 12,
-                    borderWidth: 1, borderColor: Colors.bgBorder,
-                    color: Colors.white, fontSize: 18, fontWeight: "700",
-                    paddingHorizontal: 14, paddingVertical: 14,
-                  }}
-                />
+        {!isFree && (() => {
+          const p  = parseFloat(price)         || 0;
+          const op = parseFloat(originalPrice) || 0;
+          const discount  = op > p && p > 0 ? Math.round(((op - p) / op) * 100) : null;
+          const hasError  = !!originalPrice && op > 0 && op <= p;
+          const inputBase = {
+            flex: 1, backgroundColor: Colors.bgCard, borderRadius: 12,
+            borderWidth: 1, color: Colors.white as string,
+            fontSize: 18, fontWeight: "700" as const,
+            paddingHorizontal: 14, paddingVertical: 14,
+          };
+          return (
+            <>
+              <View>
+                <Text style={{ color: Colors.textGray, fontSize: 13, fontWeight: "600", marginBottom: 8 }}>
+                  Preço *
+                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Text style={{ color: Colors.textGray, fontSize: 18, fontWeight: "700" }}>R$</Text>
+                  <TextInput
+                    value={price}
+                    onChangeText={(v) => setPrice(clean(v))}
+                    keyboardType="decimal-pad"
+                    placeholder="0,00"
+                    placeholderTextColor={Colors.textMuted}
+                    style={{ ...inputBase, borderColor: Colors.bgBorder }}
+                  />
+                </View>
               </View>
-            </View>
 
-            <View>
-              <Text style={{ color: Colors.textGray, fontSize: 13, fontWeight: "600", marginBottom: 8 }}>
-                Preço original <Text style={{ color: Colors.textMuted, fontWeight: "400" }}>(opcional — aparece riscado)</Text>
-              </Text>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Text style={{ color: Colors.textGray, fontSize: 18, fontWeight: "700" }}>R$</Text>
-                <TextInput
-                  value={originalPrice}
-                  onChangeText={(v) => setOriginalPrice(clean(v))}
-                  keyboardType="decimal-pad"
-                  placeholder="0,00"
-                  placeholderTextColor={Colors.textMuted}
-                  style={{
-                    flex: 1,
-                    backgroundColor: Colors.bgCard, borderRadius: 12,
-                    borderWidth: 1, borderColor: Colors.bgBorder,
-                    color: Colors.white, fontSize: 18, fontWeight: "700",
-                    paddingHorizontal: 14, paddingVertical: 14,
-                  }}
-                />
+              <View style={{ gap: 6 }}>
+                <Text style={{ color: Colors.textGray, fontSize: 13, fontWeight: "600" }}>
+                  Preço original{" "}
+                  <Text style={{ color: Colors.textMuted, fontWeight: "400" }}>(opcional — aparece riscado)</Text>
+                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Text style={{ color: Colors.textGray, fontSize: 18, fontWeight: "700" }}>R$</Text>
+                  <TextInput
+                    value={originalPrice}
+                    onChangeText={(v) => setOriginalPrice(clean(v))}
+                    keyboardType="decimal-pad"
+                    placeholder="0,00"
+                    placeholderTextColor={Colors.textMuted}
+                    style={{ ...inputBase, borderColor: hasError ? Colors.error : Colors.bgBorder }}
+                  />
+                </View>
+                {hasError && (
+                  <Text style={{ color: Colors.error, fontSize: 12 }}>
+                    Preço original deve ser maior que o preço base
+                  </Text>
+                )}
+                {discount !== null && (
+                  <View style={{
+                    flexDirection: "row", alignItems: "center", gap: 8,
+                    backgroundColor: Colors.success + "15", borderRadius: 10, padding: 10,
+                    borderWidth: 1, borderColor: Colors.success + "44",
+                  }}>
+                    <Ionicons name="pricetag-outline" size={16} color={Colors.success} />
+                    <Text style={{ color: Colors.success, fontSize: 13, fontWeight: "600" }}>
+                      Desconto de {discount}% será exibido no anúncio
+                    </Text>
+                  </View>
+                )}
               </View>
-            </View>
-          </>
-        )}
+            </>
+          );
+        })()}
       </View>
     </View>
   );

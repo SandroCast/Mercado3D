@@ -16,9 +16,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "../contexts/ThemeContext";
 import { useProducts, DBProduct } from "../contexts/ProductsContext";
 import { useDigitalProducts, DBDigitalProduct } from "../contexts/DigitalProductsContext";
+import { useAddress } from "../contexts/AddressContext";
+import { useAuth } from "../contexts/AuthContext";
+import { supabase } from "../lib/supabase";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { CreateListingScreen } from "./CreateListingScreen";
 import { CreateDigitalListingScreen } from "./CreateDigitalListingScreen";
+import { PersonalDataScreen } from "./PersonalDataScreen";
+import { AddressesScreen } from "./AddressesScreen";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -157,16 +162,56 @@ type FilterTab = "all" | "physical" | "digital";
 
 export function MyListingsScreen({ visible, onClose }: Props) {
   const Colors = useColors();
+  const { user } = useAuth();
   const { myProducts,       deleteProduct,        fetchMyProducts }       = useProducts();
   const { myDigitalProducts, deleteDigitalProduct, fetchMyDigitalProducts } = useDigitalProducts();
+  const { addresses } = useAddress();
 
   const [activeFilter,    setActiveFilter]    = useState<FilterTab>("all");
   const [typePickerVisible,       setTypePickerVisible]       = useState(false);
+  const [physicalListingType,     setPhysicalListingType]     = useState<"printed" | "equipment">("equipment");
   const [createPhysicalVisible,   setCreatePhysicalVisible]   = useState(false);
   const [createDigitalVisible,    setCreateDigitalVisible]    = useState(false);
   const [editItem,                setEditItem]                = useState<any>(null);
   const [deleteTarget,    setDeleteTarget]    = useState<{ id: string; digital: boolean } | null>(null);
   const [loading,         setLoading]         = useState(false);
+  const [personalDataVisible, setPersonalDataVisible] = useState(false);
+  const [addressesVisible,    setAddressesVisible]    = useState(false);
+  const [blockModal, setBlockModal] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
+
+  const handleAnunciar = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("profiles")
+      .select("cpf_cnpj, phone, person_type, birth_date")
+      .eq("id", user.id)
+      .single();
+
+    const hasPersonalData =
+      data?.cpf_cnpj && data?.phone &&
+      (data?.person_type === "pj" || data?.birth_date);
+
+    if (!hasPersonalData) {
+      setBlockModal({
+        title: "Dados pessoais incompletos",
+        message: "Para anunciar, preencha seus dados pessoais (CPF/CNPJ, telefone e data de nascimento).",
+        onConfirm: () => { setBlockModal(null); setPersonalDataVisible(true); },
+      });
+      return;
+    }
+
+    if (addresses.length === 0) {
+      setBlockModal({
+        title: "Endereço obrigatório",
+        message: "Para anunciar, cadastre pelo menos um endereço de entrega.",
+        onConfirm: () => { setBlockModal(null); setAddressesVisible(true); },
+      });
+      return;
+    }
+
+    setEditItem(null);
+    setTypePickerVisible(true);
+  }, [user, addresses]);
 
   const onRefresh = useCallback(async () => {
     setLoading(true);
@@ -223,7 +268,7 @@ export function MyListingsScreen({ visible, onClose }: Props) {
               </Text>
             </View>
             <TouchableOpacity
-              onPress={() => { setEditItem(null); setTypePickerVisible(true); }}
+              onPress={handleAnunciar}
               activeOpacity={0.8}
               style={{
                 backgroundColor: Colors.cyan,
@@ -361,7 +406,31 @@ export function MyListingsScreen({ visible, onClose }: Props) {
             </Text>
 
             <TouchableOpacity
-              onPress={() => { setTypePickerVisible(false); setCreatePhysicalVisible(true); }}
+              onPress={() => { setTypePickerVisible(false); setPhysicalListingType("printed"); setCreatePhysicalVisible(true); }}
+              style={{
+                flexDirection: "row", alignItems: "center", gap: 14,
+                backgroundColor: Colors.bgCardAlt, borderRadius: 14,
+                padding: 16, borderWidth: 1, borderColor: Colors.bgBorder,
+              }}
+            >
+              <View style={{
+                width: 44, height: 44, borderRadius: 12,
+                backgroundColor: Colors.cyan + "20",
+                alignItems: "center", justifyContent: "center",
+              }}>
+                <Ionicons name="cube-outline" size={22} color={Colors.cyan} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: Colors.white, fontSize: 15, fontWeight: "700" }}>Produtos Impressos</Text>
+                <Text style={{ color: Colors.textMuted, fontSize: 12, marginTop: 2 }}>
+                  Miniaturas, decoração, peças customizadas...
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={Colors.textMuted} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => { setTypePickerVisible(false); setPhysicalListingType("equipment"); setCreatePhysicalVisible(true); }}
               style={{
                 flexDirection: "row", alignItems: "center", gap: 14,
                 backgroundColor: Colors.bgCardAlt, borderRadius: 14,
@@ -373,10 +442,10 @@ export function MyListingsScreen({ visible, onClose }: Props) {
                 backgroundColor: Colors.orange + "20",
                 alignItems: "center", justifyContent: "center",
               }}>
-                <Ionicons name="cube-outline" size={22} color={Colors.orange} />
+                <Ionicons name="print-outline" size={22} color={Colors.orange} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: Colors.white, fontSize: 15, fontWeight: "700" }}>Produto Físico</Text>
+                <Text style={{ color: Colors.white, fontSize: 15, fontWeight: "700" }}>Impressoras e Itens</Text>
                 <Text style={{ color: Colors.textMuted, fontSize: 12, marginTop: 2 }}>
                   Impressoras, filamentos, peças, ferramentas...
                 </Text>
@@ -415,12 +484,34 @@ export function MyListingsScreen({ visible, onClose }: Props) {
         visible={createPhysicalVisible}
         onClose={() => { setCreatePhysicalVisible(false); setEditItem(null); }}
         editProduct={editItem?.isDigital ? undefined : editItem}
+        listingType={physicalListingType}
       />
 
       <CreateDigitalListingScreen
         visible={createDigitalVisible}
         onClose={() => { setCreateDigitalVisible(false); setEditItem(null); }}
         editProduct={editItem?.isDigital ? editItem : undefined}
+      />
+
+      <ConfirmModal
+        visible={blockModal !== null}
+        icon="alert-circle-outline"
+        title={blockModal?.title ?? ""}
+        message={blockModal?.message ?? ""}
+        confirmLabel="Preencher"
+        cancelLabel="Agora não"
+        onConfirm={blockModal?.onConfirm ?? (() => {})}
+        onCancel={() => setBlockModal(null)}
+      />
+
+      <PersonalDataScreen
+        visible={personalDataVisible}
+        onClose={() => setPersonalDataVisible(false)}
+      />
+
+      <AddressesScreen
+        visible={addressesVisible}
+        onClose={() => setAddressesVisible(false)}
       />
 
       <ConfirmModal

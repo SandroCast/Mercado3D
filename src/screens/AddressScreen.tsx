@@ -16,6 +16,8 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { useColors } from "../contexts/ThemeContext";
 import { useAddress } from "../contexts/AddressContext";
+import { useAuth } from "../contexts/AuthContext";
+import { supabase } from "../lib/supabase";
 import { Address, UserAddress } from "../types";
 
 // ─── Masks ────────────────────────────────────────────────────────────────────
@@ -102,6 +104,7 @@ interface AddressScreenProps {
 
 export function AddressScreen({ visible, onClose, onSaved, editingAddress }: AddressScreenProps) {
   const Colors = useColors();
+  const { user } = useAuth();
   const { addresses, createAddress, updateAddress, setDefaultAddress } = useAddress();
 
   const isEditing = !!editingAddress;
@@ -137,10 +140,17 @@ export function AddressScreen({ visible, onClose, onSaved, editingAddress }: Add
     } else {
       setForm({ ...EMPTY_FORM });
       setCepDisplay("");
-      setPhoneDisplay("");
-      // First address is always default; subsequent ones: user chooses
       setMakeDefault(addresses.length === 0);
       setCepFound(false);
+      // Pre-fill phone from profile if available
+      if (user) {
+        supabase.from("profiles").select("phone").eq("id", user.id).single()
+          .then(({ data }) => {
+            setPhoneDisplay(data?.phone ? maskPhone(data.phone) : "");
+          });
+      } else {
+        setPhoneDisplay("");
+      }
     }
     setErrors({});
     setCepError(null);
