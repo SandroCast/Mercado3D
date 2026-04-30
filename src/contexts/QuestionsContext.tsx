@@ -3,10 +3,16 @@ import { supabase } from "../lib/supabase";
 import { useAuth } from "./AuthContext";
 import { ProductQuestion } from "../types";
 
+interface AnswerQuestionOpts {
+  askerId: string;
+  productId: string;
+  productType: "physical" | "digital";
+}
+
 interface QuestionsContextValue {
   fetchQuestions: (productId: string) => Promise<ProductQuestion[]>;
   askQuestion: (input: { productId: string; productType: "physical" | "digital"; question: string }) => Promise<ProductQuestion>;
-  answerQuestion: (questionId: string, answer: string) => Promise<void>;
+  answerQuestion: (questionId: string, answer: string, opts?: AnswerQuestionOpts) => Promise<void>;
   questionsByProduct: Record<string, ProductQuestion[]>;
 }
 
@@ -76,7 +82,7 @@ export function QuestionsProvider({ children }: { children: React.ReactNode }) {
     return q;
   }, [user]);
 
-  const answerQuestion = useCallback(async (questionId: string, answer: string): Promise<void> => {
+  const answerQuestion = useCallback(async (questionId: string, answer: string, opts?: AnswerQuestionOpts): Promise<void> => {
     if (!user) throw new Error("Não autorizado.");
 
     const { error } = await supabase
@@ -98,6 +104,22 @@ export function QuestionsProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+
+    // Notify the buyer who asked the question
+    if (opts && opts.askerId !== user.id) {
+      const sellerName =
+        (user.user_metadata?.full_name as string | undefined) ??
+        user.email?.split("@")[0] ??
+        "O vendedor";
+      supabase.functions.invoke("send-push", {
+        body: {
+          toUserId: opts.askerId,
+          title: "Sua pergunta foi respondida!",
+          body: `${sellerName} respondeu sua pergunta sobre o produto.`,
+          data: { type: "answer", productId: opts.productId, productType: opts.productType },
+        },
+      }).catch((err: unknown) => console.warn("answerQuestion push error:", err));
+    }
   }, [user]);
 
   return (

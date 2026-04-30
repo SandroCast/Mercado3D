@@ -126,7 +126,7 @@ export function PendingQuestionsScreen({ visible, onClose }: Props) {
     if (!text || submitting) return;
     setSubmitting(q.id);
     try {
-      await answerQuestion(q.id, text);
+      await answerQuestion(q.id, text, { askerId: q.askerId, productId: q.productId, productType: q.productType });
       setQuestions((prev) => prev.filter((item) => item.id !== q.id));
       setAnswerTexts((prev) => { const n = { ...prev }; delete n[q.id]; return n; });
     } catch (err) {

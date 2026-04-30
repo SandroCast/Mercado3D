@@ -27,7 +27,10 @@ import { DigitalPurchasesProvider } from "./src/contexts/DigitalPurchasesContext
 import { ReviewsProvider } from "./src/contexts/ReviewsContext";
 import { QuestionsProvider } from "./src/contexts/QuestionsContext";
 import { SalesProvider } from "./src/contexts/SalesContext";
-import { NotificationsProvider } from "./src/contexts/NotificationsContext";
+import { NotificationsProvider, useNotifications } from "./src/contexts/NotificationsContext";
+import { PendingQuestionsScreen } from "./src/screens/PendingQuestionsScreen";
+import { supabase } from "./src/lib/supabase";
+import { dbToProduct } from "./src/contexts/ProductsContext";
 import { NotificationsScreen } from "./src/screens/NotificationsScreen";
 import { configureGoogleSignIn } from "./src/lib/googleSignIn";
 import { mockProducts, mockDigitalProducts } from "./src/constants/mockData";
@@ -60,12 +63,14 @@ function resolveProduct(url: string): ProductDetailItem | null {
 function AppContent() {
   const Colors = useColors();
   const { session, loading } = useAuth();
+  const { pendingTapAction, clearPendingTapAction } = useNotifications();
   const [activeTab, setActiveTab]             = useState<TabName>("home");
   const [cartVisible, setCartVisible]         = useState(false);
   const [checkoutVisible, setCheckoutVisible] = useState(false);
   const [confirmedOrder, setConfirmedOrder]   = useState<Order | null>(null);
   const [deepLinkProduct, setDeepLinkProduct]   = useState<ProductDetailItem | null>(null);
   const [notificationsVisible, setNotificationsVisible] = useState(false);
+  const [pendingQuestionsVisible, setPendingQuestionsVisible] = useState(false);
 
   const handleDeepLink = useCallback((url: string) => {
     const product = resolveProduct(url);
@@ -83,6 +88,69 @@ function AppContent() {
 
     return () => subscription.remove();
   }, [handleDeepLink]);
+
+  // Handle push notification tap — navigate to the relevant screen
+  useEffect(() => {
+    if (!pendingTapAction) return;
+    const action = pendingTapAction;
+    clearPendingTapAction();
+
+    if (action.type === "question") {
+      setPendingQuestionsVisible(true);
+      return;
+    }
+
+    if (action.type === "answer") {
+      const { productId, productType } = action;
+      (async () => {
+        try {
+          if (productType === "physical") {
+            const { data, error } = await supabase
+              .from("products")
+              .select("*, profiles:user_id(full_name, avatar_url, email)")
+              .eq("id", productId)
+              .single();
+            if (!error && data) {
+              setDeepLinkProduct(dbToProduct({
+                id: data.id, userId: data.user_id, title: data.title, description: data.description,
+                price: Number(data.price), originalPrice: data.original_price ? Number(data.original_price) : undefined,
+                brand: data.brand ?? undefined, category: data.category, condition: data.condition,
+                images: data.images ?? [], inStock: data.in_stock, freeShipping: data.free_shipping,
+                variantAttributes: data.variant_attributes ?? [], rating: Number(data.rating),
+                reviewCount: data.review_count, createdAt: data.created_at,
+                sellerName: (data.profiles as any)?.full_name ?? (data.profiles as any)?.email ?? "Vendedor",
+                sellerAvatar: (data.profiles as any)?.avatar_url ?? undefined,
+              }));
+            }
+          } else {
+            const { data, error } = await supabase
+              .from("digital_products")
+              .select("*, profiles:user_id(full_name, avatar_url, email)")
+              .eq("id", productId)
+              .single();
+            if (!error && data) {
+              const { dbToDigitalProduct } = await import("./src/contexts/DigitalProductsContext");
+              setDeepLinkProduct(dbToDigitalProduct({
+                id: data.id, userId: data.user_id, title: data.title, description: data.description,
+                price: Number(data.price), originalPrice: data.original_price ? Number(data.original_price) : undefined,
+                category: data.category, thumbnail: data.thumbnail, previewImages: data.preview_images ?? [],
+                formats: data.formats ?? [], formatFiles: data.format_files ?? {},
+                printDifficulty: data.print_difficulty, supportRequired: data.support_required,
+                license: data.license ?? undefined, downloadCount: data.download_count,
+                rating: Number(data.rating), reviewCount: data.review_count, createdAt: data.created_at,
+                sellerName: (data.profiles as any)?.full_name ?? (data.profiles as any)?.email ?? "Vendedor",
+                sellerAvatar: (data.profiles as any)?.avatar_url ?? undefined,
+              }));
+            }
+          }
+        } catch (err) {
+          console.warn("notification tap error:", err);
+        }
+      })();
+    }
+
+    // "sale" and "order" types will be handled here in the future
+  }, [pendingTapAction]);
 
   if (loading) {
     return (
@@ -139,7 +207,13 @@ function AppContent() {
         onOpenPurchases={() => setActiveTab("profile")}
       />
 
-      {/* Deep link — abre produto de qualquer tab */}
+      {/* Notificação de pergunta — abre perguntas pendentes */}
+      <PendingQuestionsScreen
+        visible={pendingQuestionsVisible}
+        onClose={() => setPendingQuestionsVisible(false)}
+      />
+
+      {/* Deep link / notificação de resposta — abre produto de qualquer tab */}
       <ProductDetailScreen
         visible={deepLinkProduct !== null}
         product={deepLinkProduct}

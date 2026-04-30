@@ -169,7 +169,7 @@ export function CreateListingScreen({
         variants.length > 0 &&
         variants.every((v) => {
           const s = parseInt(v.stock);
-          return !isNaN(s) && s >= 0;
+          return !isNaN(s) && s >= 0 && v.images.length > 0;
         })
       );
       case 4: return parseFloat(price) > 0;
@@ -970,12 +970,17 @@ function VariantCard({
 
       {/* Fotos da variante */}
       <View>
-        <Text style={{ color: Colors.textGray, fontSize: 12, fontWeight: "600", marginBottom: 8 }}>
-          Fotos{" "}
-          <Text style={{ color: Colors.textMuted, fontWeight: "400" }}>
-            ({variant.images.length}/6)
+        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8, gap: 6 }}>
+          <Text style={{ color: variant.images.length === 0 ? Colors.error : Colors.textGray, fontSize: 12, fontWeight: "600" }}>
+            Fotos *{" "}
+            <Text style={{ color: Colors.textMuted, fontWeight: "400" }}>
+              ({variant.images.length}/6)
+            </Text>
           </Text>
-        </Text>
+          {variant.images.length === 0 && (
+            <Text style={{ color: Colors.error, fontSize: 11 }}>Obrigatório</Text>
+          )}
+        </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={{ flexDirection: "row", gap: 8 }}>
             {variant.images.map((uri, i) => (
@@ -1014,13 +1019,14 @@ function VariantCard({
                 }}
                 style={{
                   width: 72, height: 72, borderRadius: 8,
-                  borderWidth: 1.5, borderStyle: "dashed", borderColor: Colors.cyan + "55",
-                  backgroundColor: Colors.cyan + "08",
+                  borderWidth: 1.5, borderStyle: "dashed",
+                  borderColor: variant.images.length === 0 ? Colors.error + "99" : Colors.cyan + "55",
+                  backgroundColor: variant.images.length === 0 ? Colors.error + "10" : Colors.cyan + "08",
                   alignItems: "center", justifyContent: "center", gap: 4,
                 }}
               >
-                <Ionicons name="camera-outline" size={22} color={Colors.cyan} />
-                <Text style={{ color: Colors.cyan, fontSize: 10, fontWeight: "600" }}>Fotos</Text>
+                <Ionicons name="camera-outline" size={22} color={variant.images.length === 0 ? Colors.error : Colors.cyan} />
+                <Text style={{ color: variant.images.length === 0 ? Colors.error : Colors.cyan, fontSize: 10, fontWeight: "600" }}>Fotos</Text>
               </TouchableOpacity>
             )}
           </View>

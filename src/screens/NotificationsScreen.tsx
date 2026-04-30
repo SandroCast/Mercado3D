@@ -148,11 +148,11 @@ type NotificationAction =
   | null;
 
 function resolveAction(n: AppNotification): NotificationAction {
-  const title = n.title.toLowerCase();
   const data = n.data as Record<string, unknown>;
   const nType = data?.type as string | undefined;
 
-  if (nType === "question" || title.includes("pergunta")) return { type: "questions" };
+  // Always resolve by type first — title fallbacks can misfire (e.g. "pergunta" in answer titles)
+  if (nType === "question") return { type: "questions" };
   if (
     nType === "answer" &&
     typeof data.productId === "string" &&
@@ -160,8 +160,8 @@ function resolveAction(n: AppNotification): NotificationAction {
   ) {
     return { type: "product", productId: data.productId, productType: data.productType };
   }
-  if (nType === "sale" || title.includes("venda")) return { type: "sales" };
-  if (nType === "order" || title.includes("pedido") || typeof data?.orderId === "string") return { type: "purchases" };
+  if (nType === "sale") return { type: "sales" };
+  if (nType === "order") return { type: "purchases" };
   return null;
 }
 

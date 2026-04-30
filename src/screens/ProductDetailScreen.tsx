@@ -589,20 +589,11 @@ export function ProductDetailScreen({
     if (!answeringQuestion || !answerText.trim() || submittingAnswer) return;
     setSubmittingAnswer(true);
     try {
-      await answerQuestion(answeringQuestion.id, answerText);
-      // Notify buyer about the answer (skip if seller is answering their own question)
-      if (answeringQuestion.askerId !== session?.user.id) {
-        await sendPush({
-          toUserId: answeringQuestion.askerId,
-          title: "💬 Sua pergunta foi respondida",
-          body: `O vendedor respondeu: "${answerText.trim().slice(0, 80)}"`,
-          data: {
-            type: "answer",
-            productId: answeringQuestion.productId,
-            productType: answeringQuestion.productType,
-          },
-        });
-      }
+      await answerQuestion(answeringQuestion.id, answerText, {
+        askerId: answeringQuestion.askerId,
+        productId: answeringQuestion.productId,
+        productType: answeringQuestion.productType,
+      });
       setAnsweringQuestion(null);
       setAnswerText("");
     } catch (err) {

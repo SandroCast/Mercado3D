@@ -21,6 +21,7 @@ import { MyDigitalFilesScreen } from "./MyDigitalFilesScreen";
 import { MySalesScreen } from "./MySalesScreen";
 import { NotificationsScreen } from "./NotificationsScreen";
 import { useNotifications } from "../contexts/NotificationsContext";
+import { PersonalDataScreen } from "./PersonalDataScreen";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -43,7 +44,7 @@ const SECTIONS: Section[] = [
   {
     title: "Minhas Atividades",
     items: [
-      { icon: "bag-handle-outline",   label: "Minhas Compras",    color: "#22d3ee", badge: "3" },
+      { icon: "bag-handle-outline",   label: "Minhas Compras",    color: "#22d3ee" },
       { icon: "cube-outline",         label: "Meus Arquivos STL", color: "#7c3aed" },
       { icon: "trending-up-outline",  label: "Minhas Vendas",     color: "#22c55e" },
       { icon: "megaphone-outline",    label: "Meus Anúncios",     color: "#f97316" },
@@ -179,6 +180,7 @@ export function MoreScreen() {
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const [verifyModalVisible, setVerifyModalVisible] = useState(false);
   const [editProfileVisible, setEditProfileVisible] = useState(false);
+  const [personalDataVisible, setPersonalDataVisible] = useState(false);
   const [addressesVisible,   setAddressesVisible]   = useState(false);
   const [ordersVisible,      setOrdersVisible]      = useState(false);
   const [listingsVisible,    setListingsVisible]    = useState(false);
@@ -189,6 +191,7 @@ export function MoreScreen() {
   const sections = SECTIONS.map((section) => ({
     ...section,
     items: section.items.map((item) => {
+      if (item.label === "Dados Pessoais")   return { ...item, onPress: () => setPersonalDataVisible(true) };
       if (item.label === "Endereços")        return { ...item, onPress: () => setAddressesVisible(true) };
       if (item.label === "Minhas Compras")   return { ...item, onPress: () => setOrdersVisible(true) };
       if (item.label === "Meus Arquivos STL") return { ...item, onPress: () => setDigitalFilesVisible(true) };
@@ -401,6 +404,11 @@ export function MoreScreen() {
       <EditProfileScreen
         visible={editProfileVisible}
         onClose={() => setEditProfileVisible(false)}
+      />
+
+      <PersonalDataScreen
+        visible={personalDataVisible}
+        onClose={() => setPersonalDataVisible(false)}
       />
 
       <AddressesScreen

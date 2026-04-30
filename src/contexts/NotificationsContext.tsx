@@ -23,6 +23,12 @@ export interface AppNotification {
   createdAt: string;
 }
 
+export type NotificationTapAction =
+  | { type: "question" }
+  | { type: "answer"; productId: string; productType: "physical" | "digital" }
+  | { type: "sale" }
+  | { type: "order" };
+
 interface NotificationsContextValue {
   notifications: AppNotification[];
   unreadCount: number;
@@ -36,6 +42,8 @@ interface NotificationsContextValue {
     body: string;
     data?: Record<string, unknown>;
   }) => Promise<void>;
+  pendingTapAction: NotificationTapAction | null;
+  clearPendingTapAction: () => void;
 }
 
 const NotificationsContext = createContext<NotificationsContextValue | null>(null);
@@ -82,6 +90,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(false);
+  const [pendingTapAction, setPendingTapAction] = useState<NotificationTapAction | null>(null);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -103,7 +112,24 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     notificationListener.current = Notifications.addNotificationReceivedListener((_n) => {
       fetchNotifications();
     });
-    responseListener.current = Notifications.addNotificationResponseReceivedListener((_r) => {});
+    responseListener.current = Notifications.addNotificationResponseReceivedListener((r) => {
+      const data = r.notification.request.content.data ?? {};
+      const type = typeof data.type === "string" ? data.type : null;
+
+      if (type === "question") {
+        setPendingTapAction({ type: "question" });
+      } else if (type === "answer") {
+        const productId   = typeof data.productId   === "string" ? data.productId   : null;
+        const productType = data.productType === "physical" || data.productType === "digital" ? data.productType : null;
+        if (productId && productType) {
+          setPendingTapAction({ type: "answer", productId, productType });
+        }
+      } else if (type === "sale") {
+        setPendingTapAction({ type: "sale" });
+      } else if (type === "order") {
+        setPendingTapAction({ type: "order" });
+      }
+    });
 
     return () => {
       supabase.removeChannel(channel);
@@ -166,8 +192,10 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     }
   }
 
+  const clearPendingTapAction = useCallback(() => setPendingTapAction(null), []);
+
   return (
-    <NotificationsContext.Provider value={{ notifications, unreadCount, loading, fetchNotifications, markRead, markAllRead, sendPush }}>
+    <NotificationsContext.Provider value={{ notifications, unreadCount, loading, fetchNotifications, markRead, markAllRead, sendPush, pendingTapAction, clearPendingTapAction }}>
       {children}
     </NotificationsContext.Provider>
   );
