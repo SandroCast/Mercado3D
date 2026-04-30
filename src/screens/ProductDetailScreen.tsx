@@ -446,8 +446,13 @@ export function ProductDetailScreen({
     : [];
 
   const attrValues: Record<string, string[]> = {};
-  for (const name of attrNames) {
-    attrValues[name] = [...new Set(variants.map((v) => v.attributes[name]).filter(Boolean))];
+  for (let i = 0; i < attrNames.length; i++) {
+    const name = attrNames[i];
+    const priorAttrs = attrNames.slice(0, i);
+    const compatibleVariants = variants.filter((v) =>
+      priorAttrs.every((a) => !selectedAttributes[a] || v.attributes[a] === selectedAttributes[a])
+    );
+    attrValues[name] = [...new Set(compatibleVariants.map((v) => v.attributes[name]).filter(Boolean))];
   }
 
   const selectedVariant: ProductVariant | null = variants.length > 0
@@ -455,6 +460,25 @@ export function ProductDetailScreen({
         attrNames.every((n) => v.attributes[n] === selectedAttributes[n])
       ) ?? null
     : null;
+
+  const handleAttrSelect = (attrName: string, val: string) => {
+    const attrIdx = attrNames.indexOf(attrName);
+    const newSel: Record<string, string> = {};
+    for (let i = 0; i < attrIdx; i++) {
+      const a = attrNames[i];
+      if (selectedAttributes[a]) newSel[a] = selectedAttributes[a];
+    }
+    newSel[attrName] = val;
+    for (let i = attrIdx + 1; i < attrNames.length; i++) {
+      const nextName = attrNames[i];
+      const compatible = variants.filter((v) =>
+        Object.entries(newSel).every(([k, va]) => v.attributes[k] === va)
+      );
+      const available = [...new Set(compatible.map((v) => v.attributes[nextName]).filter(Boolean))];
+      if (available.length === 1) newSel[nextName] = available[0];
+    }
+    setSelectedAttributes(newSel);
+  };
 
   // Images: always use selected variant's photos; fall back to product images for digital
   const images: string[] = (() => {
@@ -1007,7 +1031,12 @@ export function ProductDetailScreen({
                   <Text style={{ color: Colors.white, fontSize: 15, fontWeight: "700", marginBottom: 12 }}>
                     Variantes
                   </Text>
-                  {attrNames.map((attrName) => (
+                  {attrNames.map((attrName, attrIdx) => {
+                    const priorAttrs = attrNames.slice(0, attrIdx);
+                    const compatibleVariants = variants.filter((v) =>
+                      priorAttrs.every((a) => !selectedAttributes[a] || v.attributes[a] === selectedAttributes[a])
+                    );
+                    return (
                     <View key={attrName} style={{ marginBottom: 14 }}>
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
                         <Text style={{ color: Colors.textGray, fontSize: 13, fontWeight: "600" }}>
@@ -1022,7 +1051,7 @@ export function ProductDetailScreen({
                       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                         {(attrValues[attrName] ?? []).map((val) => {
                           const isSelected = selectedAttributes[attrName] === val;
-                          const hasStock = variants.some(
+                          const hasStock = compatibleVariants.some(
                             (v) => v.attributes[attrName] === val && v.stock > 0
                           );
                           return (
@@ -1030,7 +1059,7 @@ export function ProductDetailScreen({
                               key={val}
                               onPress={() => {
                                 if (!hasStock) return;
-                                setSelectedAttributes((prev) => ({ ...prev, [attrName]: val }));
+                                handleAttrSelect(attrName, val);
                               }}
                               activeOpacity={0.7}
                               style={{
@@ -1056,7 +1085,8 @@ export function ProductDetailScreen({
                         })}
                       </View>
                     </View>
-                  ))}
+                  );
+                  })}
                   {selectedVariant && (
                     <View style={{
                       flexDirection: "row", alignItems: "center", gap: 10,
