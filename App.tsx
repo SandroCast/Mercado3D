@@ -10,7 +10,7 @@ import { MoreScreen } from "./src/screens/MoreScreen";
 import { LoginScreen } from "./src/screens/LoginScreen";
 import { CartScreen } from "./src/screens/CartScreen";
 import { CheckoutScreen } from "./src/screens/CheckoutScreen";
-import { FavoritesScreen } from "./src/screens/FavoritesScreen";
+import { ForumScreen } from "./src/screens/ForumScreen";
 import { OrderConfirmScreen } from "./src/screens/OrderConfirmScreen";
 import { ProductDetailScreen, ProductDetailItem } from "./src/screens/ProductDetailScreen";
 import { BottomNavBar, TabName } from "./src/components/BottomNavBar";
@@ -28,6 +28,7 @@ import { ReviewsProvider } from "./src/contexts/ReviewsContext";
 import { QuestionsProvider } from "./src/contexts/QuestionsContext";
 import { SalesProvider } from "./src/contexts/SalesContext";
 import { NotificationsProvider, useNotifications } from "./src/contexts/NotificationsContext";
+import { ForumProvider } from "./src/contexts/ForumContext";
 import { PendingQuestionsScreen } from "./src/screens/PendingQuestionsScreen";
 import { supabase } from "./src/lib/supabase";
 import { dbToProduct } from "./src/contexts/ProductsContext";
@@ -193,8 +194,8 @@ function AppContent() {
       <View style={{ flex: 1, display: activeTab === "stl" ? "flex" : "none" }}>
         <DigitalScreen onLoginRequired={() => setActiveTab("profile")} />
       </View>
-      <View style={{ flex: 1, display: activeTab === "favorites" ? "flex" : "none" }}>
-        <FavoritesScreen />
+      <View style={{ flex: 1, display: activeTab === "forum" ? "flex" : "none" }}>
+        <ForumScreen />
       </View>
       <View style={{ flex: 1, display: activeTab === "profile" ? "flex" : "none" }}>
         {profileRequiresLogin ? <LoginScreen /> : <MoreScreen />}
@@ -267,7 +268,9 @@ export default function App() {
                             <QuestionsProvider>
                               <SalesProvider>
                                 <NotificationsProvider>
-                                  <AppContent />
+                                  <ForumProvider>
+                                    <AppContent />
+                                  </ForumProvider>
                                 </NotificationsProvider>
                               </SalesProvider>
                             </QuestionsProvider>

@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "../contexts/ThemeContext";
 
-export type TabName = "home" | "search" | "stl" | "favorites" | "profile";
+export type TabName = "home" | "search" | "stl" | "forum" | "profile";
 
 interface Tab {
   name: TabName;
@@ -18,8 +18,8 @@ const LEFT_TABS: Tab[] = [
 ];
 
 const RIGHT_TABS: Tab[] = [
-  { name: "favorites", label: "Favoritos",  icon: "heart-outline",      iconActive: "heart" },
-  { name: "profile",   label: "Mais",       icon: "grid-outline",       iconActive: "grid" },
+  { name: "forum",   label: "Fórum",  icon: "chatbubbles-outline", iconActive: "chatbubbles" },
+  { name: "profile", label: "Mais",   icon: "grid-outline",        iconActive: "grid" },
 ];
 
 interface BottomNavBarProps {

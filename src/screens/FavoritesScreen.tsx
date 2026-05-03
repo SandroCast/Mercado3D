@@ -7,6 +7,9 @@ import {
   Image,
   ActivityIndicator,
   RefreshControl,
+  Modal,
+  StatusBar,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -202,7 +205,12 @@ function FavoriteCard({
 
 // ─── FavoritesScreen ──────────────────────────────────────────────────────────
 
-export function FavoritesScreen() {
+interface FavoritesScreenProps {
+  visible?: boolean;
+  onClose?: () => void;
+}
+
+export function FavoritesScreen({ visible, onClose }: FavoritesScreenProps = {}) {
   const Colors = useColors();
   const { session } = useAuth();
   const { favorites, loading, toggleFavorite, fetchFavorites } = useFavorites();
@@ -216,15 +224,35 @@ export function FavoritesScreen() {
     if (product) setOpenProduct(product);
   };
 
-  if (!session) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }} edges={["top"]}>
-        <View style={{
-          paddingHorizontal: 16, paddingVertical: 14,
-          borderBottomWidth: 1, borderBottomColor: Colors.bgBorder,
-        }}>
+  const isModal = visible !== undefined;
+
+  const content = (
+    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }} edges={["top"]}>
+      {isModal && <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />}
+
+      {/* Header */}
+      <View style={{
+        flexDirection: "row", alignItems: "center", gap: 8,
+        paddingHorizontal: 12, paddingVertical: 12,
+        borderBottomWidth: 1, borderBottomColor: Colors.bgBorder,
+        backgroundColor: Colors.bgCard,
+      }}>
+        {isModal && onClose && (
+          <TouchableOpacity onPress={onClose} activeOpacity={0.7} style={{ padding: 6 }}>
+            <Ionicons name="arrow-back" size={24} color={Colors.white} />
+          </TouchableOpacity>
+        )}
+        <View style={{ flex: 1 }}>
           <Text style={{ color: Colors.white, fontSize: 18, fontWeight: "800" }}>Favoritos</Text>
+          {favorites.length > 0 && (
+            <Text style={{ color: Colors.textMuted, fontSize: 12, marginTop: 1 }}>
+              {favorites.length} {favorites.length === 1 ? "item salvo" : "itens salvos"}
+            </Text>
+          )}
         </View>
+      </View>
+
+      {!session ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 40, gap: 16 }}>
           <View style={{
             width: 80, height: 80, borderRadius: 40,
@@ -240,28 +268,7 @@ export function FavoritesScreen() {
             Entre na sua conta para salvar e visualizar seus produtos favoritos.
           </Text>
         </View>
-      </SafeAreaView>
-    );
-  }
-
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }} edges={["top"]}>
-
-      {/* Header */}
-      <View style={{
-        paddingHorizontal: 16, paddingVertical: 14,
-        borderBottomWidth: 1, borderBottomColor: Colors.bgBorder,
-      }}>
-        <Text style={{ color: Colors.white, fontSize: 18, fontWeight: "800" }}>Favoritos</Text>
-        {favorites.length > 0 && (
-          <Text style={{ color: Colors.textMuted, fontSize: 12, marginTop: 1 }}>
-            {favorites.length} {favorites.length === 1 ? "item salvo" : "itens salvos"}
-          </Text>
-        )}
-      </View>
-
-      {/* Body */}
-      {loading && favorites.length === 0 ? (
+      ) : loading && favorites.length === 0 ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 12 }}>
           <ActivityIndicator size="large" color={Colors.cyan} />
           <Text style={{ color: Colors.textMuted, fontSize: 14 }}>Carregando favoritos...</Text>
@@ -312,7 +319,6 @@ export function FavoritesScreen() {
             />
           ))}
 
-          {/* Tip */}
           <View style={{
             flexDirection: "row", alignItems: "flex-start", gap: 8,
             backgroundColor: Colors.bgCard, borderRadius: 10, padding: 12,
@@ -326,7 +332,6 @@ export function FavoritesScreen() {
         </ScrollView>
       )}
 
-      {/* Product modal */}
       <ProductDetailScreen
         visible={openProduct !== null}
         product={openProduct}
@@ -335,4 +340,14 @@ export function FavoritesScreen() {
       />
     </SafeAreaView>
   );
+
+  if (isModal) {
+    return (
+      <Modal visible={visible} animationType="slide" statusBarTranslucent onRequestClose={onClose}>
+        {content}
+      </Modal>
+    );
+  }
+
+  return content;
 }

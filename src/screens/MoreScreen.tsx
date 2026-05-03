@@ -22,6 +22,7 @@ import { MySalesScreen } from "./MySalesScreen";
 import { NotificationsScreen } from "./NotificationsScreen";
 import { useNotifications } from "../contexts/NotificationsContext";
 import { PersonalDataScreen } from "./PersonalDataScreen";
+import { FavoritesScreen } from "./FavoritesScreen";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -48,6 +49,7 @@ const SECTIONS: Section[] = [
       { icon: "cube-outline",         label: "Meus Arquivos STL", color: "#7c3aed" },
       { icon: "trending-up-outline",  label: "Minhas Vendas",     color: "#22c55e" },
       { icon: "megaphone-outline",    label: "Meus Anúncios",     color: "#f97316" },
+      { icon: "heart-outline",        label: "Favoritos",         color: "#ec4899" },
     ],
   },
   {
@@ -187,6 +189,7 @@ export function MoreScreen() {
   const [digitalFilesVisible, setDigitalFilesVisible] = useState(false);
   const [salesVisible,       setSalesVisible]       = useState(false);
   const [notificationsVisible, setNotificationsVisible] = useState(false);
+  const [favoritesVisible, setFavoritesVisible] = useState(false);
 
   const sections = SECTIONS.map((section) => ({
     ...section,
@@ -198,6 +201,7 @@ export function MoreScreen() {
       if (item.label === "Minhas Vendas")    return { ...item, onPress: () => setSalesVisible(true) };
       if (item.label === "Meus Anúncios")    return { ...item, onPress: () => setListingsVisible(true) };
       if (item.label === "Notificações")     return { ...item, onPress: () => setNotificationsVisible(true), badge: unreadCount > 0 ? String(unreadCount) : undefined };
+      if (item.label === "Favoritos")        return { ...item, onPress: () => setFavoritesVisible(true) };
       return item;
     }),
   }));
@@ -441,6 +445,11 @@ export function MoreScreen() {
         onClose={() => setNotificationsVisible(false)}
         onOpenSales={() => { setNotificationsVisible(false); setSalesVisible(true); }}
         onOpenPurchases={() => { setNotificationsVisible(false); setOrdersVisible(true); }}
+      />
+
+      <FavoritesScreen
+        visible={favoritesVisible}
+        onClose={() => setFavoritesVisible(false)}
       />
     </SafeAreaView>
   );
