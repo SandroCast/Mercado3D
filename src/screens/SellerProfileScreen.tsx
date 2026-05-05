@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Modal,
   View,
@@ -20,6 +20,7 @@ import { Seller, Product, DigitalProduct } from "../types";
 import { useFavorites } from "../contexts/FavoritesContext";
 import { useFollows } from "../contexts/FollowsContext";
 import { useAuth } from "../contexts/AuthContext";
+import { supabase } from "../lib/supabase";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -50,11 +51,28 @@ export function SellerProfileScreen({
   onProductPress,
 }: SellerProfileScreenProps) {
   const Colors = useColors();
-  const { session } = useAuth();
+  const { session, user } = useAuth();
   const { isFavorite, toggleFavorite } = useFavorites();
   const { isFollowing, toggleFollow, loading: followLoading } = useFollows();
 
   const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
+  const [counts, setCounts] = useState({ followers: 0, following: 0 });
+
+  const isOwnProfile = !!user && user.id === seller?.id;
+
+  useEffect(() => {
+    if (!visible || !seller) return;
+    (async () => {
+      const [followersRes, followingRes] = await Promise.all([
+        supabase.from("user_follows").select("*", { count: "exact", head: true }).eq("seller_id", seller.id),
+        supabase.from("user_follows").select("*", { count: "exact", head: true }).eq("user_id",   seller.id),
+      ]);
+      setCounts({
+        followers: followersRes.count ?? 0,
+        following: followingRes.count  ?? 0,
+      });
+    })();
+  }, [visible, seller?.id]);
 
   if (!seller) return null;
 
@@ -192,9 +210,11 @@ export function SellerProfileScreen({
               alignSelf: "stretch",
             }}>
               {[
-                { icon: "star" as const,         value: seller.rating.toFixed(1), label: "Avaliação",  color: Colors.warning },
-                { icon: "bag-check-outline" as const, value: seller.totalSales.toLocaleString("pt-BR"), label: "Vendas", color: Colors.cyan },
-                { icon: "cube-outline" as const,  value: String(totalProducts),   label: "Produtos",   color: Colors.purple },
+                { icon: "star" as const,              value: seller.rating.toFixed(1),                          label: "Avaliação",  color: Colors.warning },
+                { icon: "bag-check-outline" as const, value: seller.totalSales.toLocaleString("pt-BR"),          label: "Vendas",     color: Colors.cyan    },
+                { icon: "cube-outline" as const,      value: String(totalProducts),                             label: "Produtos",   color: Colors.purple  },
+                { icon: "people-outline" as const,    value: counts.followers.toLocaleString("pt-BR"),           label: "Seguidores", color: "#f97316"      },
+                { icon: "person-add-outline" as const, value: counts.following.toLocaleString("pt-BR"),          label: "Seguindo",   color: "#a78bfa"      },
               ].map((stat, i) => (
                 <View key={stat.label} style={{
                   flex: 1,
@@ -215,8 +235,8 @@ export function SellerProfileScreen({
               ))}
             </View>
 
-            {/* Action buttons — only when logged in */}
-            {session && <View style={{ flexDirection: "row", gap: 10, alignSelf: "stretch", marginTop: 4 }}>
+            {/* Action buttons — only when logged in and viewing another user's profile */}
+            {session && !isOwnProfile && <View style={{ flexDirection: "row", gap: 10, alignSelf: "stretch", marginTop: 4 }}>
               <TouchableOpacity
                 onPress={() => toggleFollow(seller.id)}
                 activeOpacity={0.8}

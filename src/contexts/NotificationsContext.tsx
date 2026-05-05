@@ -26,6 +26,7 @@ export interface AppNotification {
 export type NotificationTapAction =
   | { type: "question" }
   | { type: "answer"; productId: string; productType: "physical" | "digital" }
+  | { type: "forum_reply"; topicId: string; categoryId: string }
   | { type: "sale" }
   | { type: "order" };
 
@@ -123,6 +124,12 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
         const productType = data.productType === "physical" || data.productType === "digital" ? data.productType : null;
         if (productId && productType) {
           setPendingTapAction({ type: "answer", productId, productType });
+        }
+      } else if (type === "forum_reply") {
+        const topicId    = typeof data.topicId    === "string" ? data.topicId    : null;
+        const categoryId = typeof data.categoryId === "string" ? data.categoryId : null;
+        if (topicId && categoryId) {
+          setPendingTapAction({ type: "forum_reply", topicId, categoryId });
         }
       } else if (type === "sale") {
         setPendingTapAction({ type: "sale" });

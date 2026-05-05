@@ -10,7 +10,10 @@ import { MoreScreen } from "./src/screens/MoreScreen";
 import { LoginScreen } from "./src/screens/LoginScreen";
 import { CartScreen } from "./src/screens/CartScreen";
 import { CheckoutScreen } from "./src/screens/CheckoutScreen";
-import { ForumScreen } from "./src/screens/ForumScreen";
+import { ForumScreen, FORUM_CATEGORIES } from "./src/screens/ForumScreen";
+import { TopicDetailScreen } from "./src/screens/TopicDetailScreen";
+import { ForumTopic } from "./src/contexts/ForumContext";
+import { ForumCategory } from "./src/screens/TopicListScreen";
 import { OrderConfirmScreen } from "./src/screens/OrderConfirmScreen";
 import { ProductDetailScreen, ProductDetailItem } from "./src/screens/ProductDetailScreen";
 import { BottomNavBar, TabName } from "./src/components/BottomNavBar";
@@ -70,6 +73,7 @@ function AppContent() {
   const [checkoutVisible, setCheckoutVisible] = useState(false);
   const [confirmedOrder, setConfirmedOrder]   = useState<Order | null>(null);
   const [deepLinkProduct, setDeepLinkProduct]   = useState<ProductDetailItem | null>(null);
+  const [deepLinkForumTopic, setDeepLinkForumTopic] = useState<{ topic: ForumTopic; category: ForumCategory } | null>(null);
   const [notificationsVisible, setNotificationsVisible] = useState(false);
   const [pendingQuestionsVisible, setPendingQuestionsVisible] = useState(false);
 
@@ -98,6 +102,38 @@ function AppContent() {
 
     if (action.type === "question") {
       setPendingQuestionsVisible(true);
+      return;
+    }
+
+    if (action.type === "forum_reply") {
+      setActiveTab("forum");
+      const { topicId, categoryId } = action;
+      const category = FORUM_CATEGORIES.find((c) => c.id === categoryId);
+      if (!category) return;
+      (async () => {
+        try {
+          const { data, error } = await supabase
+            .from("forum_topics")
+            .select("*, profiles:author_id(full_name, avatar_url, email)")
+            .eq("id", topicId)
+            .single();
+          if (!error && data) {
+            const r = data as any;
+            const topic: ForumTopic = {
+              id: r.id, categoryId: r.category_id, title: r.title, body: r.body,
+              authorId: r.author_id,
+              authorName: r.profiles?.full_name ?? r.profiles?.email ?? "Usuário",
+              authorAvatar: r.profiles?.avatar_url ?? undefined,
+              createdAt: r.created_at, updatedAt: r.updated_at,
+              viewCount: r.view_count, replyCount: r.reply_count,
+              isPinned: r.is_pinned, isLocked: r.is_locked, hasSolution: r.has_solution,
+            };
+            setDeepLinkForumTopic({ topic, category });
+          }
+        } catch (err) {
+          console.warn("forum notification tap error:", err);
+        }
+      })();
       return;
     }
 
@@ -195,7 +231,7 @@ function AppContent() {
         <DigitalScreen onLoginRequired={() => setActiveTab("profile")} />
       </View>
       <View style={{ flex: 1, display: activeTab === "forum" ? "flex" : "none" }}>
-        <ForumScreen />
+        <ForumScreen onTopicOpen={(topic, category) => setDeepLinkForumTopic({ topic, category })} />
       </View>
       <View style={{ flex: 1, display: activeTab === "profile" ? "flex" : "none" }}>
         {profileRequiresLogin ? <LoginScreen /> : <MoreScreen />}
@@ -247,6 +283,15 @@ function AppContent() {
         onTabPress={setActiveTab}
         isDigital={isDigital}
       />
+
+      {/* Tópico do fórum — renderizado por último para ficar sobre tudo, inclusive o BottomNavBar */}
+      {deepLinkForumTopic && (
+        <TopicDetailScreen
+          topic={deepLinkForumTopic.topic}
+          category={deepLinkForumTopic.category}
+          onClose={() => setDeepLinkForumTopic(null)}
+        />
+      )}
     </View>
   );
 }

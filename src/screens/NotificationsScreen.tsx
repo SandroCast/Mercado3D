@@ -9,6 +9,10 @@ import { useColors } from "../contexts/ThemeContext";
 import { useNotifications, AppNotification } from "../contexts/NotificationsContext";
 import { PendingQuestionsScreen } from "./PendingQuestionsScreen";
 import { ProductDetailScreen, ProductDetailItem } from "./ProductDetailScreen";
+import { TopicDetailScreen } from "./TopicDetailScreen";
+import { ForumCategory } from "./TopicListScreen";
+import { FORUM_CATEGORIES } from "./ForumScreen";
+import { ForumTopic } from "../contexts/ForumContext";
 import { supabase } from "../lib/supabase";
 import { dbToProduct } from "../contexts/ProductsContext";
 import { dbToDigitalProduct } from "../contexts/DigitalProductsContext";
@@ -31,6 +35,7 @@ function iconFromTitle(title: string): { name: keyof typeof import("@expo/vector
   if (title.includes("venda") || title.includes("🛒")) return { name: "bag-check-outline",           color: "#22c55e" };
   if (title.includes("pedido") || title.includes("📦")) return { name: "cube-outline",               color: "#06b6d4" };
   if (title.includes("pergunta") || title.includes("❓")) return { name: "help-circle-outline",      color: "#f59e0b" };
+  if (title.includes("mencionado") || title.includes("fórum") || title.includes("tópico")) return { name: "chatbubbles-outline", color: "#22d3ee" };
   if (title.includes("respondida") || title.includes("💬")) return { name: "chatbubble-outline",     color: "#7c3aed" };
   return { name: "notifications-outline", color: "#94a3b8" };
 }
@@ -143,6 +148,7 @@ async function fetchProductById(
 type NotificationAction =
   | { type: "questions" }
   | { type: "product"; productId: string; productType: "physical" | "digital" }
+  | { type: "forum"; topicId: string; categoryId: string }
   | { type: "sales" }
   | { type: "purchases" }
   | null;
@@ -151,7 +157,6 @@ function resolveAction(n: AppNotification): NotificationAction {
   const data = n.data as Record<string, unknown>;
   const nType = data?.type as string | undefined;
 
-  // Always resolve by type first — title fallbacks can misfire (e.g. "pergunta" in answer titles)
   if (nType === "question") return { type: "questions" };
   if (
     nType === "answer" &&
@@ -160,9 +165,35 @@ function resolveAction(n: AppNotification): NotificationAction {
   ) {
     return { type: "product", productId: data.productId, productType: data.productType };
   }
+  if (
+    nType === "forum_reply" &&
+    typeof data.topicId    === "string" &&
+    typeof data.categoryId === "string"
+  ) {
+    return { type: "forum", topicId: data.topicId, categoryId: data.categoryId };
+  }
   if (nType === "sale") return { type: "sales" };
   if (nType === "order") return { type: "purchases" };
   return null;
+}
+
+async function fetchTopicById(topicId: string): Promise<ForumTopic | null> {
+  const { data, error } = await supabase
+    .from("forum_topics")
+    .select("*, profiles:author_id(full_name, avatar_url, email)")
+    .eq("id", topicId)
+    .single();
+  if (error || !data) return null;
+  const r = data as any;
+  return {
+    id: r.id, categoryId: r.category_id, title: r.title, body: r.body,
+    authorId: r.author_id,
+    authorName: r.profiles?.full_name ?? r.profiles?.email ?? "Usuário",
+    authorAvatar: r.profiles?.avatar_url ?? undefined,
+    createdAt: r.created_at, updatedAt: r.updated_at,
+    viewCount: r.view_count, replyCount: r.reply_count,
+    isPinned: r.is_pinned, isLocked: r.is_locked, hasSolution: r.has_solution,
+  };
 }
 
 interface Props {
@@ -177,6 +208,7 @@ export function NotificationsScreen({ visible, onClose, onOpenSales, onOpenPurch
   const { notifications, loading, unreadCount, fetchNotifications, markRead, markAllRead } = useNotifications();
   const [pendingQuestionsVisible, setPendingQuestionsVisible] = useState(false);
   const [productToOpen, setProductToOpen] = useState<ProductDetailItem | null>(null);
+  const [forumTopicToOpen, setForumTopicToOpen] = useState<{ topic: ForumTopic; category: ForumCategory } | null>(null);
 
   useEffect(() => {
     if (visible) fetchNotifications();
@@ -192,6 +224,10 @@ export function NotificationsScreen({ visible, onClose, onOpenSales, onOpenPurch
     } else if (action.type === "product") {
       const product = await fetchProductById(action.productId, action.productType);
       if (product) setProductToOpen(product);
+    } else if (action.type === "forum") {
+      const topic = await fetchTopicById(action.topicId);
+      const category = FORUM_CATEGORIES.find((c) => c.id === action.categoryId);
+      if (topic && category) setForumTopicToOpen({ topic, category });
     } else if (action.type === "sales") {
       onClose();
       onOpenSales?.();
@@ -288,6 +324,14 @@ export function NotificationsScreen({ visible, onClose, onOpenSales, onOpenPurch
         product={productToOpen}
         onClose={() => setProductToOpen(null)}
       />
+
+      {forumTopicToOpen && (
+        <TopicDetailScreen
+          topic={forumTopicToOpen.topic}
+          category={forumTopicToOpen.category}
+          onClose={() => setForumTopicToOpen(null)}
+        />
+      )}
     </Modal>
   );
 }

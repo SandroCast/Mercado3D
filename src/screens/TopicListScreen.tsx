@@ -10,7 +10,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "../contexts/ThemeContext";
 import { useAuth } from "../contexts/AuthContext";
 import { useForum, ForumTopic } from "../contexts/ForumContext";
-import { TopicDetailScreen } from "./TopicDetailScreen";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -280,9 +279,10 @@ function NewTopicForm({
 interface TopicListScreenProps {
   category: ForumCategory;
   onBack: () => void;
+  onTopicOpen: (topic: ForumTopic, category: ForumCategory) => void;
 }
 
-export function TopicListScreen({ category, onBack }: TopicListScreenProps) {
+export function TopicListScreen({ category, onBack, onTopicOpen }: TopicListScreenProps) {
   const Colors = useColors();
   const { session } = useAuth();
   const { topicsByCategory, fetchTopics, createTopic } = useForum();
@@ -292,7 +292,6 @@ export function TopicListScreen({ category, onBack }: TopicListScreenProps) {
   const [loaded, setLoaded]             = useState(false);
   const [refreshing, setRefreshing]     = useState(false);
   const [newTopicVisible, setNewTopicVisible] = useState(false);
-  const [selectedTopic, setSelectedTopic]     = useState<ForumTopic | null>(null);
 
   const categoryId = category.id;
   const topics     = topicsByCategory[categoryId] ?? [];
@@ -469,19 +468,12 @@ export function TopicListScreen({ category, onBack }: TopicListScreenProps) {
             </View>
           ) : (
             filtered.map((topic) => (
-              <TopicCard key={topic.id} topic={topic} onPress={() => setSelectedTopic(topic)} />
+              <TopicCard key={topic.id} topic={topic} onPress={() => onTopicOpen(topic, category)} />
             ))
           )}
         </ScrollView>
       )}
 
-      {selectedTopic && (
-        <TopicDetailScreen
-          topic={selectedTopic}
-          category={category}
-          onClose={() => setSelectedTopic(null)}
-        />
-      )}
     </View>
   );
 }

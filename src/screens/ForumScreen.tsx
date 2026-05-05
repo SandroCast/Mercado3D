@@ -10,7 +10,7 @@ import { useColors } from "../contexts/ThemeContext";
 import { useAuth } from "../contexts/AuthContext";
 import { useForum, ForumSearchResult } from "../contexts/ForumContext";
 import { TopicListScreen, ForumCategory } from "./TopicListScreen";
-import { TopicDetailScreen } from "./TopicDetailScreen";
+import { ForumTopic } from "../contexts/ForumContext";
 
 // ─── Categories ───────────────────────────────────────────────────────────────
 
@@ -191,7 +191,11 @@ function SearchResultCard({
 
 // ─── ForumScreen ──────────────────────────────────────────────────────────────
 
-export function ForumScreen() {
+interface ForumScreenProps {
+  onTopicOpen: (topic: ForumTopic, category: ForumCategory) => void;
+}
+
+export function ForumScreen({ onTopicOpen }: ForumScreenProps) {
   const Colors = useColors();
   const { session } = useAuth();
   const { topicsByCategory, searchTopics } = useForum();
@@ -200,19 +204,17 @@ export function ForumScreen() {
   const [selectedCategory, setSelectedCategory] = useState<ForumCategory | null>(null);
   const [searchResults, setSearchResults]       = useState<ForumSearchResult[]>([]);
   const [searchLoading, setSearchLoading]       = useState(false);
-  const [searchTopic, setSearchTopic]           = useState<{ topic: typeof searchResults[0]["topic"]; category: ForumCategory } | null>(null);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!selectedCategory && !searchTopic) return;
+    if (!selectedCategory) return;
     const handler = BackHandler.addEventListener("hardwareBackPress", () => {
-      if (searchTopic) { setSearchTopic(null); return true; }
-      if (selectedCategory) { setSelectedCategory(null); return true; }
-      return false;
+      setSelectedCategory(null);
+      return true;
     });
     return () => handler.remove();
-  }, [selectedCategory, searchTopic]);
+  }, [selectedCategory]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -255,6 +257,7 @@ export function ForumScreen() {
         <TopicListScreen
           category={selectedCategory}
           onBack={() => setSelectedCategory(null)}
+          onTopicOpen={onTopicOpen}
         />
       </SafeAreaView>
     );
@@ -342,7 +345,7 @@ export function ForumScreen() {
                 result={r}
                 onPress={() => {
                   const cat = FORUM_CATEGORIES.find((c) => c.id === r.topic.categoryId);
-                  if (cat) setSearchTopic({ topic: r.topic, category: cat });
+                  if (cat) onTopicOpen(r.topic, cat);
                 }}
               />
             ))}
@@ -420,14 +423,6 @@ export function ForumScreen() {
         )}
       </ScrollView>
 
-      {/* Open topic found via search */}
-      {searchTopic && (
-        <TopicDetailScreen
-          topic={searchTopic.topic}
-          category={searchTopic.category}
-          onClose={() => setSearchTopic(null)}
-        />
-      )}
     </SafeAreaView>
   );
 }

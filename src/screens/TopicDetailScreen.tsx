@@ -11,6 +11,7 @@ import {
   StatusBar,
   Modal,
   BackHandler,
+  StyleSheet,
   Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -18,6 +19,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "../contexts/ThemeContext";
 import { useAuth } from "../contexts/AuthContext";
 import { useForum, ForumTopic, ForumPost } from "../contexts/ForumContext";
+import { useNotifications } from "../contexts/NotificationsContext";
 import { ForumCategory } from "./TopicListScreen";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { AlertModal } from "../components/AlertModal";
@@ -512,6 +514,7 @@ interface Props {
 export function TopicDetailScreen({ topic, category, onClose }: Props) {
   const Colors = useColors();
   const { user } = useAuth();
+  const { sendPush } = useNotifications();
   const {
     postsByTopic,
     fetchPosts,
@@ -559,16 +562,41 @@ export function TopicDetailScreen({ topic, category, onClose }: Props) {
     if (!replyText.trim()) return;
     setSending(true);
     try {
-      await createPost(topicId, replyText, parentId ?? undefined);
+      const post = await createPost(topicId, replyText, parentId ?? undefined);
       setReplyingTo(null);
       setReplyText("");
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
-    } catch (e: any) {
+
+      // Send push notification (fire-and-forget, never block UI)
+      const notifData = { type: "forum_reply", topicId, categoryId: topic.categoryId };
+      if (parentId === null) {
+        // Reply to OP — notify topic author if not self
+        if (topic.authorId !== user?.id) {
+          sendPush({
+            toUserId: topic.authorId,
+            title:    "💬 Nova resposta",
+            body:     `${post.authorName} respondeu no seu tópico "${topic.title}"`,
+            data:     notifData,
+          });
+        }
+      } else {
+        // Reply mentioning another user — notify parent post author if not self
+        const parentPost = posts.find((p) => p.id === parentId);
+        if (parentPost && parentPost.authorId !== user?.id) {
+          sendPush({
+            toUserId: parentPost.authorId,
+            title:    "💬 Você foi mencionado",
+            body:     `${post.authorName} mencionou você em "${topic.title}"`,
+            data:     notifData,
+          });
+        }
+      }
+    } catch {
       // silently ignore — user sees nothing changed
     } finally {
       setSending(false);
     }
-  }, [replyText, topicId, createPost]);
+  }, [replyText, topicId, createPost, sendPush, topic, posts, user]);
 
   const handleSaveEdit = useCallback(async () => {
     if (!editingPost || !editBody.trim()) return;
@@ -606,7 +634,7 @@ export function TopicDetailScreen({ topic, category, onClose }: Props) {
     userId:            user?.id ?? null,
     isTopicAuthor,
     topicAuthorId:     topic.authorId,
-    isLocked:          topic.isLocked,
+    isLocked:          topic.isLocked || topic.hasSolution,
     replyingTo,
     replyText,
     sendingReply:      sending,
@@ -630,7 +658,7 @@ export function TopicDetailScreen({ topic, category, onClose }: Props) {
   const authorInitials = topic.authorName.slice(0, 2).toUpperCase();
 
   return (
-    <Modal visible={true} transparent={false} animationType="none" statusBarTranslucent onRequestClose={onClose}>
+    <View style={StyleSheet.absoluteFillObject}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       <SafeAreaView edges={["top", "bottom"]} style={{ flex: 1, backgroundColor: Colors.bg }}>
 
@@ -769,7 +797,7 @@ export function TopicDetailScreen({ topic, category, onClose }: Props) {
                 </View>
 
                 {/* Reply button */}
-                {session && !topic.isLocked && (
+                {session && !topic.isLocked && !topic.hasSolution && (
                   <TouchableOpacity
                     onPress={() => replyingTo === "__op__" ? setReplyingTo(null) : setReplyingTo("__op__")}
                     style={{
@@ -931,6 +959,6 @@ export function TopicDetailScreen({ topic, category, onClose }: Props) {
         message="Obrigado por ajudar a manter a comunidade saudável. Nossa equipe irá analisar em breve."
         onClose={() => setReportVisible(false)}
       />
-    </Modal>
+    </View>
   );
 }

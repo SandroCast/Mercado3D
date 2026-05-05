@@ -161,7 +161,7 @@ export function PendingQuestionsScreen({ visible, onClose }: Props) {
           </View>
         </View>
 
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
           {loading && questions.length === 0 ? (
             <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
               <ActivityIndicator color={Colors.cyan} />
@@ -182,6 +182,7 @@ export function PendingQuestionsScreen({ visible, onClose }: Props) {
           ) : (
             <ScrollView
               showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
               refreshControl={
                 <RefreshControl refreshing={loading} onRefresh={fetchPending} tintColor={Colors.cyan} />
               }
