@@ -193,9 +193,10 @@ function SearchResultCard({
 
 interface ForumScreenProps {
   onTopicOpen: (topic: ForumTopic, category: ForumCategory) => void;
+  embedded?: boolean;
 }
 
-export function ForumScreen({ onTopicOpen }: ForumScreenProps) {
+export function ForumScreen({ onTopicOpen, embedded }: ForumScreenProps) {
   const Colors = useColors();
   const { session } = useAuth();
   const { topicsByCategory, searchTopics } = useForum();
@@ -252,7 +253,7 @@ export function ForumScreen({ onTopicOpen }: ForumScreenProps) {
 
   if (selectedCategory) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }} edges={["top"]}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }} edges={embedded ? [] : ["top"]}>
         <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
         <TopicListScreen
           category={selectedCategory}
@@ -264,7 +265,7 @@ export function ForumScreen({ onTopicOpen }: ForumScreenProps) {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }} edges={["top"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }} edges={embedded ? [] : ["top"]}>
 
       {/* Header */}
       <View style={{
@@ -273,14 +274,16 @@ export function ForumScreen({ onTopicOpen }: ForumScreenProps) {
         paddingHorizontal: 16, paddingTop: 14, paddingBottom: 12,
         gap: 12,
       }}>
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <View>
-            <Text style={{ color: Colors.white, fontSize: 22, fontWeight: "900" }}>Fórum</Text>
-            <Text style={{ color: Colors.textMuted, fontSize: 12, marginTop: 1 }}>
-              Comunidade Mercado3D
-            </Text>
+        {!embedded && (
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <View>
+              <Text style={{ color: Colors.white, fontSize: 22, fontWeight: "900" }}>Fórum</Text>
+              <Text style={{ color: Colors.textMuted, fontSize: 12, marginTop: 1 }}>
+                Comunidade Mercado3D
+              </Text>
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Busca */}
         <View style={{

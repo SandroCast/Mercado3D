@@ -18,7 +18,7 @@ const LEFT_TABS: Tab[] = [
 ];
 
 const RIGHT_TABS: Tab[] = [
-  { name: "forum",   label: "Fórum",  icon: "chatbubbles-outline", iconActive: "chatbubbles" },
+  { name: "forum",   label: "Social",  icon: "people-outline", iconActive: "people" },
   { name: "profile", label: "Mais",   icon: "grid-outline",        iconActive: "grid" },
 ];
 

@@ -41,6 +41,7 @@ interface SellerProfileScreenProps {
   onClose: () => void;
   onLoginRequired?: () => void;
   onProductPress?: (product: ProductDetailItem) => void;
+  onMessage?: (userId: string, userName: string, userAvatar?: string) => void;
 }
 
 export function SellerProfileScreen({
@@ -49,6 +50,7 @@ export function SellerProfileScreen({
   onClose,
   onLoginRequired,
   onProductPress,
+  onMessage,
 }: SellerProfileScreenProps) {
   const Colors = useColors();
   const { session, user } = useAuth();
@@ -269,6 +271,7 @@ export function SellerProfileScreen({
               </TouchableOpacity>
 
               <TouchableOpacity
+                onPress={() => onMessage?.(seller.id, seller.name, seller.avatar ?? undefined)}
                 activeOpacity={0.8}
                 style={{
                   flex: 1,

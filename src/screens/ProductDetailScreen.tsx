@@ -340,6 +340,7 @@ interface ProductDetailScreenProps {
   onClose: () => void;
   /** Chamado quando usuário não logado tenta adicionar ao carrinho */
   onLoginRequired?: () => void;
+  onMessage?: (userId: string, userName: string, userAvatar?: string) => void;
 }
 
 export function ProductDetailScreen({
@@ -347,6 +348,7 @@ export function ProductDetailScreen({
   product,
   onClose,
   onLoginRequired,
+  onMessage,
 }: ProductDetailScreenProps) {
   const Colors = useColors();
   const { session } = useAuth();
@@ -1349,6 +1351,22 @@ export function ProductDetailScreen({
                 Vendedor
               </Text>
               <SellerCard seller={product.seller} onPress={() => setSellerProfileVisible(true)} />
+              {session && (
+                <TouchableOpacity
+                  onPress={() => onMessage?.(product.seller.id, product.seller.name, product.seller.avatar ?? undefined)}
+                  activeOpacity={0.8}
+                  style={{
+                    marginTop: 10,
+                    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+                    paddingVertical: 12, borderRadius: 12,
+                    borderWidth: 1.5, borderColor: Colors.bgBorder,
+                    backgroundColor: Colors.bgCardAlt,
+                  }}
+                >
+                  <Ionicons name="chatbubble-outline" size={16} color={Colors.textGray} />
+                  <Text style={{ color: Colors.textGray, fontSize: 14, fontWeight: "700" }}>Mensagem</Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* Divider */}
@@ -1935,6 +1953,7 @@ export function ProductDetailScreen({
         onClose={() => setSellerProfileVisible(false)}
         onLoginRequired={onLoginRequired}
         onProductPress={(p) => { setSellerProfileVisible(false); setNestedProduct(p); }}
+        onMessage={onMessage}
       />
 
       <ProductDetailScreen

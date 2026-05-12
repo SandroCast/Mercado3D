@@ -10,8 +10,10 @@ import { MoreScreen } from "./src/screens/MoreScreen";
 import { LoginScreen } from "./src/screens/LoginScreen";
 import { CartScreen } from "./src/screens/CartScreen";
 import { CheckoutScreen } from "./src/screens/CheckoutScreen";
-import { ForumScreen, FORUM_CATEGORIES } from "./src/screens/ForumScreen";
+import { SocialHubScreen } from "./src/screens/SocialHubScreen";
+import { FORUM_CATEGORIES } from "./src/screens/ForumScreen";
 import { TopicDetailScreen } from "./src/screens/TopicDetailScreen";
+import { ConversationScreen } from "./src/screens/ConversationScreen";
 import { ForumTopic } from "./src/contexts/ForumContext";
 import { ForumCategory } from "./src/screens/TopicListScreen";
 import { OrderConfirmScreen } from "./src/screens/OrderConfirmScreen";
@@ -32,6 +34,7 @@ import { QuestionsProvider } from "./src/contexts/QuestionsContext";
 import { SalesProvider } from "./src/contexts/SalesContext";
 import { NotificationsProvider, useNotifications } from "./src/contexts/NotificationsContext";
 import { ForumProvider } from "./src/contexts/ForumContext";
+import { ConversationsProvider, useConversations, ConversationSummary } from "./src/contexts/ConversationsContext";
 import { PendingQuestionsScreen } from "./src/screens/PendingQuestionsScreen";
 import { supabase } from "./src/lib/supabase";
 import { dbToProduct } from "./src/contexts/ProductsContext";
@@ -68,12 +71,14 @@ function AppContent() {
   const Colors = useColors();
   const { session, loading } = useAuth();
   const { pendingTapAction, clearPendingTapAction } = useNotifications();
+  const { openOrCreate } = useConversations();
   const [activeTab, setActiveTab]             = useState<TabName>("home");
   const [cartVisible, setCartVisible]         = useState(false);
   const [checkoutVisible, setCheckoutVisible] = useState(false);
   const [confirmedOrder, setConfirmedOrder]   = useState<Order | null>(null);
   const [deepLinkProduct, setDeepLinkProduct]   = useState<ProductDetailItem | null>(null);
   const [deepLinkForumTopic, setDeepLinkForumTopic] = useState<{ topic: ForumTopic; category: ForumCategory } | null>(null);
+  const [activeConversation, setActiveConversation] = useState<ConversationSummary | null>(null);
   const [notificationsVisible, setNotificationsVisible] = useState(false);
   const [pendingQuestionsVisible, setPendingQuestionsVisible] = useState(false);
 
@@ -189,6 +194,20 @@ function AppContent() {
     // "sale" and "order" types will be handled here in the future
   }, [pendingTapAction]);
 
+  const handleOpenMessage = useCallback(async (
+    userId: string,
+    userName: string,
+    userAvatar?: string,
+  ) => {
+    if (!session) { setActiveTab("profile"); return; }
+    try {
+      const conv = await openOrCreate(userId, userName, userAvatar);
+      setActiveConversation(conv);
+    } catch (err) {
+      console.warn("handleOpenMessage error:", err);
+    }
+  }, [session, openOrCreate]);
+
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: Colors.bg, alignItems: "center", justifyContent: "center" }}>
@@ -201,7 +220,6 @@ function AppContent() {
   const profileRequiresLogin = activeTab === "profile" && !session;
 
   const handleCheckout = () => {
-    // Open checkout on top of cart — no delay, no flash
     setCheckoutVisible(true);
   };
 
@@ -231,7 +249,11 @@ function AppContent() {
         <DigitalScreen onLoginRequired={() => setActiveTab("profile")} />
       </View>
       <View style={{ flex: 1, display: activeTab === "forum" ? "flex" : "none" }}>
-        <ForumScreen onTopicOpen={(topic, category) => setDeepLinkForumTopic({ topic, category })} />
+        <SocialHubScreen
+          onTopicOpen={(topic, category) => setDeepLinkForumTopic({ topic, category })}
+          onOpenConversation={setActiveConversation}
+          onLoginRequired={() => setActiveTab("profile")}
+        />
       </View>
       <View style={{ flex: 1, display: activeTab === "profile" ? "flex" : "none" }}>
         {profileRequiresLogin ? <LoginScreen /> : <MoreScreen />}
@@ -256,6 +278,7 @@ function AppContent() {
         product={deepLinkProduct}
         onClose={() => setDeepLinkProduct(null)}
         onLoginRequired={() => setActiveTab("profile")}
+        onMessage={handleOpenMessage}
       />
 
       <CartScreen
@@ -284,12 +307,19 @@ function AppContent() {
         isDigital={isDigital}
       />
 
-      {/* Tópico do fórum — renderizado por último para ficar sobre tudo, inclusive o BottomNavBar */}
+      {/* Renderizados por último para ficarem sobre tudo, inclusive o BottomNavBar */}
       {deepLinkForumTopic && (
         <TopicDetailScreen
           topic={deepLinkForumTopic.topic}
           category={deepLinkForumTopic.category}
           onClose={() => setDeepLinkForumTopic(null)}
+        />
+      )}
+
+      {activeConversation && (
+        <ConversationScreen
+          conversation={activeConversation}
+          onClose={() => setActiveConversation(null)}
         />
       )}
     </View>
@@ -314,7 +344,9 @@ export default function App() {
                               <SalesProvider>
                                 <NotificationsProvider>
                                   <ForumProvider>
-                                    <AppContent />
+                                    <ConversationsProvider>
+                                      <AppContent />
+                                    </ConversationsProvider>
                                   </ForumProvider>
                                 </NotificationsProvider>
                               </SalesProvider>
